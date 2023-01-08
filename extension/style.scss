@@ -1,0 +1,151 @@
+// ****** Variables *****
+$color-primary: #0c1c25;
+$color-primary-inv: #ffffff;
+$color-primary-light: #0B2D40;
+$color-text: #0c1c25;
+$background-color: #ffffff;
+
+$font-family: 'Prompt', Arial, Helvetica, sans-serif;
+$font-size: 12pt;
+
+
+// ****** Font ******
+@font-face {
+  font-family: "Prompt";
+  src: url('fonts/Prompt-Regular.ttf');
+  font-weight: normal;
+  font-style: normal;
+}
+@font-face {
+  font-family: "Prompt";
+  src: url('fonts/Prompt-Bold.ttf');
+  font-weight: bold;
+  font-style: normal;
+}
+
+// ****** Styles ******
+
+*,
+body {
+  font-family: $font-family;
+  font-size: $font-size;
+  color: $color-text;
+}
+
+h2 {
+  font-size: 1.5em;
+}
+
+code {
+  font-family: 'Courier New', Courier, monospace;
+}
+
+/* ---- General styles ---- */
+.info-message {
+  border: 1px solid #84a1ff;
+  padding: 0.5em 0.7em;
+  background-color: #cbd7ff;
+  margin: 1em;
+}
+
+.button {
+  display: block;
+  // border: 1px solid $color-primary;
+  background-color: $color-primary;
+  color: $color-primary-inv;
+  padding: 0.5em 0.7em;
+  text-align: center;
+  text-decoration: none;
+  border-radius: 0.3em;
+  font-size: 0.9em;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    background-color: $color-primary-light;
+  }
+}
+
+/* ---- Tables ---- */
+table {
+  border-collapse: collapse;
+}
+
+th,
+td {
+  border: 1px solid;
+  padding: 1px 2px;
+}
+
+/* ---- Forms ---- */
+label {
+  display: block;
+  margin-right: 1em;
+}
+
+input {
+  border: 2px solid $color-primary;
+  border-radius: 0.3em;
+  padding: 0.5em 0.7em;
+  flex-grow: 1;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+
+  * {
+    margin-bottom: 0.5em;
+  }
+}
+
+/* ---- Popup ---- */
+.popup-main {
+  max-width: 600px;
+
+  h1 img {
+    max-height: 50px;
+  }
+}
+
+/* ---- Options ---- */
+.options-main {
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+
+  header {
+    text-align: center;
+  }
+}
+
+/* ---- Prompt ---- */
+.prompt-main {
+  .prompt-host {
+    display: 'block';
+    text-align: 'center';
+    font-size: 2em;
+  }
+
+  .prompt-requests li {
+    font-size: 1.2em;
+  }
+
+  .prompt-request-raw {
+    overflow: auto;
+    border: 1px solid #333333;
+    display: block;
+    padding: 1em;
+    margin-bottom: 1em;
+  }
+
+  .prompt-action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+  }
+
+  .prompt-action-buttons * {
+    margin: 0.5em;
+  }
+}

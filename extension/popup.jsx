@@ -3,6 +3,8 @@ import {render} from 'react-dom'
 import {getPublicKey} from 'nostr-tools'
 import React, {useState, useEffect} from 'react'
 
+import logotype from './icons/logotype.png'
+
 function Popup() {
   let [key, setKey] = useState('')
 
@@ -25,9 +27,11 @@ function Popup() {
 
   return (
     <>
-      <h2>nos2x</h2>
+      <h1>
+        <img src={logotype} alt="nos2x" />
+      </h1>
       {key === null ? (
-        <p style={{width: '150px'}}>
+        <p>
           you don't have a private key set. use the{' '}
           <a href="#" onClick={goToOptionsPage}>
             options page
