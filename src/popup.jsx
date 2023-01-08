@@ -3,7 +3,7 @@ import {render} from 'react-dom'
 import {getPublicKey} from 'nostr-tools'
 import React, {useState, useEffect} from 'react'
 
-import logotype from './icons/logotype.png'
+import logotype from './assets/icons/logotype.png'
 
 function Popup() {
   let [key, setKey] = useState('')

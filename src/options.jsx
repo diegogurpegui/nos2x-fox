@@ -3,7 +3,7 @@ import React, {useState, useEffect} from 'react'
 import {render} from 'react-dom'
 
 import {getPermissionsString, readPermissions} from './common'
-import logotype from './icons/logotype.png'
+import logotype from './assets/icons/logotype.png'
 
 function Options() {
   let [key, setKey] = useState('')

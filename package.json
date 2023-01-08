@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "esbuild": "^0.16.15",
+    "esbuild-plugin-copy": "^2.0.1",
     "eslint": "^8.6.0",
     "eslint-plugin-babel": "^5.3.1",
     "eslint-plugin-react": "^7.28.0",
@@ -15,7 +16,7 @@
     "build": "./build.js prod",
     "watch": "ag -l --js | entr ./build.js",
     "sources": "rm -f extension/*.build.*; zip -r sources . -i extension build.js README.md",
-    "package": "./build.js prod; cd extension; zip -r archive *; cd ..; mv extension/archive.zip ./nos2x.zip"
+    "package": "./build.js prod; cd dist; zip -r archive *; cd ..; mv dist/archive.zip ./nos2x.zip"
   },
   "devDependencies": {
     "esbuild-sass-plugin": "^2.4.5"

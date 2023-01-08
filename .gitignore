@@ -1,6 +1,5 @@
 node_modules
 
 # Build files
-*.build.css
-*.build.js
+dist/
 *.zip

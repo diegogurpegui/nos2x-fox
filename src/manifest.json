@@ -5,17 +5,17 @@
   "homepage_url": "https://github.com/diegogurpegui/nos2x-firefox",
   "manifest_version": 2,
   "icons": {
-    "16": "icons/16x16.png",
-    "32": "icons/32x32.png",
-    "48": "icons/48x48.png",
-    "128": "icons/128x128.png"
+    "16": "assets/icons/16x16.png",
+    "32": "assets/icons/32x32.png",
+    "48": "assets/icons/48x48.png",
+    "128": "assets/icons/128x128.png"
   },
   "options_ui": {
     "page": "options.html",
     "browser_style": true
   },
   "background": {
-    "scripts": ["background.build.js"]
+    "scripts": ["background.js"]
   },
   "browser_action": {
     "default_title": "nos2x",
@@ -24,7 +24,7 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content-script.build.js"]
+      "js": ["content-script.js"]
     }
   ],
   "permissions": ["storage"],

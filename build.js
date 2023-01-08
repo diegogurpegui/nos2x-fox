@@ -2,6 +2,7 @@
 
 const esbuild = require('esbuild')
 const {sassPlugin} = require('esbuild-sass-plugin')
+const {copy} = require('esbuild-plugin-copy')
 
 const prod = process.argv.indexOf('prod') !== -1
 
@@ -9,24 +10,41 @@ esbuild
   .build({
     bundle: true,
     entryPoints: {
-      'popup.build': './extension/popup.jsx',
-      'prompt.build': './extension/prompt.jsx',
-      'options.build': './extension/options.jsx',
-      'background.build': './extension/background.js',
-      'content-script.build': './extension/content-script.js',
+      background: './src/background.js',
+      'content-script': './src/content-script.js',
+      common: './src/common.js',
+      'nostr-provider': './src/nostr-provider.js',
+      popup: './src/popup.jsx',
+      prompt: './src/prompt.jsx',
+      options: './src/options.jsx',
       // styles
-      'style.build': './extension/style.scss'
+      style: './src/style.scss'
     },
-    outdir: './extension',
+    outdir: './dist',
     loader: {
       ['.png']: 'dataurl',
       ['.svg']: 'text',
       ['.ttf']: 'file'
     },
-    plugins: [sassPlugin()],
+    plugins: [
+      sassPlugin(),
+      copy({
+        assets: [
+          {
+            from: ['./src/*.html', './src/manifest.json'],
+            to: ['./']
+          },
+          {
+            from: ['./src/assets/icons/*'],
+            to: ['./assets/icons']
+          }
+        ]
+      })
+    ],
     sourcemap: prod ? false : 'inline',
     define: {
       global: 'window'
     }
   })
-  .then(() => console.log('build success.'))
+  .then(() => console.log('Build success.'))
+  .catch(err => console.error('Build error.', err))
