@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 const esbuild = require('esbuild')
-const alias = require('esbuild-plugin-alias')
-const nodeGlobals = require('@esbuild-plugins/node-globals-polyfill').default
+// const alias = require('esbuild-plugin-alias')
+// const nodeGlobals = require('@esbuild-plugins/node-globals-polyfill').default
 
 const prod = process.argv.indexOf('prod') !== -1
 
@@ -17,12 +17,12 @@ esbuild
       'content-script.build': './extension/content-script.js'
     },
     outdir: './extension',
-    plugins: [
-      alias({
-        stream: require.resolve('readable-stream')
-      }),
-      nodeGlobals({buffer: true})
-    ],
+    // plugins: [
+    //   alias({
+    //     stream: require.resolve('readable-stream')
+    //   }),
+    //   nodeGlobals({buffer: true})
+    // ],
     sourcemap: prod ? false : 'inline',
     define: {
       global: 'window'
