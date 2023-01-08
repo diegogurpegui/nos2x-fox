@@ -17,10 +17,6 @@ async window.nostr.nip04.encrypt(pubkey, plaintext): string // returns ciphertex
 async window.nostr.nip04.decrypt(pubkey, ciphertext): string // takes ciphertext+iv as specified in nip04
 ```
 
-## Demo Video
-
-https://user-images.githubusercontent.com/1653275/149637382-65d50a85-fe30-4259-b7de-99c88b089b53.mp4
-
 ## Install
 
 * [Firefox Add-on](https://addons.mozilla.org/en-US/firefox/addon/nos2x/)
@@ -44,15 +40,23 @@ yarn run build
 4. "Load Temporary Add-on..."
 5. select any file from the `extension/` folder
 
+
+## Demo Video (original nos2x for Chrome)
+
+https://user-images.githubusercontent.com/1653275/149637382-65d50a85-fe30-4259-b7de-99c88b089b53.mp4
+
 ## Screenshots
 
-![](screenshot1.png)
-![](screenshot2.png)
-![](screenshot3.png)
-![](screenshot4.png)
+![](screenshots/screenshot_popup.png)
+![](screenshots/screenshot_options.png)
+![](screenshots/screenshot_popup-with-key.png)
+![](screenshots/screenshot_prompt.png)
 
 ---
 
-LICENSE: public domain.
+## License and Credits
 
-Icon made by <a href="https://www.freepik.com" title="Freepik">Freepik</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a>.
+LICENSE: public domain.
+Original work by [fiatjaf](https://github.com/fiatjaf)
+
+Design taken from [Flydexo](https://github.com/Flydexo). See https://github.com/fiatjaf/nos2x/pull/15
