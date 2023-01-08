@@ -19,50 +19,34 @@ function Prompt() {
   return (
     <>
       <div>
-        <b style={{display: 'block', textAlign: 'center', fontSize: '200%'}}>
-          {host}
-        </b>{' '}
-        <p>is requesting your permission to </p>
-        <ul>
+        <b class="prompt-host">{host}</b>{' '}
+        <p>is requesting your permission to:</p>
+        <ul class="prompt-requests">
           {getAllowedCapabilities(level).map(cap => (
-            <li key={cap}>
-              <i style={{fontSize: '140%'}}>{cap}</i>
-            </li>
+            <li key={cap}>{cap}</li>
           ))}
         </ul>
       </div>
       {params && (
         <>
           <p>now acting on</p>
-          <pre style={{overflow: 'auto', maxHeight: '100px'}}>
+          <pre className="prompt-request-raw">
             <code>{JSON.stringify(params, null, 2)}</code>
           </pre>
         </>
       )}
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'space-around'
-        }}
-      >
-        <button
-          style={{marginTop: '5px'}}
-          onClick={authorizeHandler('forever')}
-        >
-          authorize forever
+      <div className="prompt-action-buttons">
+        <button className="button" onClick={authorizeHandler('forever')}>
+          ✅ Authorize forever
         </button>
-        <button
-          style={{marginTop: '5px'}}
-          onClick={authorizeHandler('expirable')}
-        >
-          authorize for 5 minutes
+        <button className="button" onClick={authorizeHandler('expirable')}>
+          🕐 Authorize for 5 minutes
         </button>
-        <button style={{marginTop: '5px'}} onClick={authorizeHandler('single')}>
-          authorize just this
+        <button className="button" onClick={authorizeHandler('single')}>
+          ☑️ Authorize just this
         </button>
-        <button style={{marginTop: '5px'}} onClick={authorizeHandler('no')}>
-          cancel
+        <button className="button" onClick={authorizeHandler('no')}>
+          ❌ Reject
         </button>
       </div>
     </>

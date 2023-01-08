@@ -10,24 +10,24 @@
     "48": "icons/48x48.png",
     "128": "icons/128x128.png"
   },
+  "options_ui": {
+    "page": "options.html",
+    "browser_style": true
+  },
   "background": {
-    "scripts": [
-      "background.build.js"
-    ]
+    "scripts": ["background.build.js"]
   },
   "browser_action": {
     "default_title": "nos2x",
     "default_popup": "popup.html"
   },
-  "content_scripts": [{
-    "matches": ["<all_urls>"],
-    "js": [
-      "content-script.build.js"
-    ]
-  }],
-  "permissions": [
-    "storage"
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content-script.build.js"]
+    }
   ],
+  "permissions": ["storage"],
   "web_accessible_resources": ["nostr-provider.js"],
   "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self';"
 }

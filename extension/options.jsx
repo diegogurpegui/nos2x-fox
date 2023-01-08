@@ -29,19 +29,33 @@ function Options() {
       )
     })
   }, [])
+  async function handleKeyChange(e) {
+    let key = e.target.value.toLowerCase().trim()
+    setKey(key)
+
+    if (key.match(/^[a-f0-9]{64}$/) || key === '') {
+      await browser.storage.local.set({
+        private_key: key
+      })
+      setMessage('saved!')
+      setTimeout(setMessage, 3000)
+    } else {
+      setMessage('The key is not valid.')
+    }
+  }
 
   return (
     <>
       <h1>nos2x</h1>
       <p>nostr signer extension</p>
-      <h2>options</h2>
-      <label>
-        private key:&nbsp;
-        <input value={key} onChange={handleKeyChange} />
-      </label>
+      <h2>Options</h2>
+      <div class="form-field">
+        <label for="private-key">Private key:</label>
+        <input id="private-key" value={key} onChange={handleKeyChange} />
+      </div>
       {permissions?.length > 0 && (
         <>
-          <h2>permissions</h2>
+          <h2>Permissions</h2>
           <table>
             <thead>
               <tr>
@@ -70,22 +84,9 @@ function Options() {
           </table>
         </>
       )}
-      <div>{message}</div>
+      {message && <div class="info-message">ℹ️ {message}</div>}
     </>
   )
-
-  async function handleKeyChange(e) {
-    let key = e.target.value.toLowerCase().trim()
-    setKey(key)
-
-    if (key.match(/^[a-f0-9]{64}$/) || key === '') {
-      await browser.storage.local.set({
-        private_key: key
-      })
-      setMessage('saved!')
-      setTimeout(setMessage, 3000)
-    }
-  }
 }
 
 render(<Options />, document.getElementById('main'))

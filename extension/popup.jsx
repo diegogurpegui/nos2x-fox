@@ -1,5 +1,4 @@
 import browser from 'webextension-polyfill'
-import {Buffer} from 'buffer'
 import {render} from 'react-dom'
 import {getPublicKey} from 'nostr-tools'
 import React, {useState, useEffect} from 'react'
@@ -16,6 +15,13 @@ function Popup() {
       }
     })
   }, [])
+
+  function goToOptionsPage() {
+    browser.tabs.create({
+      url: browser.runtime.getURL('options.html'),
+      active: true
+    })
+  }
 
   return (
     <>
@@ -41,23 +47,14 @@ function Popup() {
             <code>{key}</code>
           </pre>
           <p>
-            <small>
-              <a href="#" onClick={goToOptionsPage}>
-                options
-              </a>
-            </small>
+            <a className="button" href="#" onClick={goToOptionsPage}>
+              ⚙️ Options
+            </a>
           </p>
         </>
       )}
     </>
   )
-
-  function goToOptionsPage() {
-    browser.tabs.create({
-      url: browser.runtime.getURL('options.html'),
-      active: true
-    })
-  }
 }
 
 render(<Popup />, document.getElementById('main'))

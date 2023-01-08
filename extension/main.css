@@ -1,0 +1,94 @@
+*,
+body {
+    font-family: Arial, Helvetica, sans-serif
+}
+
+code {
+    font-family: 'Courier New', Courier, monospace;
+}
+
+/* ---- General styles ---- */
+.info-message {
+    border: 1px solid #84a1ff;
+    padding: 0.5em;
+    background-color: #cbd7ff;
+    margin: 1em;
+}
+
+.button {
+    display: block;
+    border: 1px solid #0b0070;
+    background-color: #c6cde4;
+    color: #000000;
+    padding: 0.5em;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 0.3em;
+    font-size: 0.9em;
+    cursor: pointer;
+}
+
+.button:hover {
+    background-color: #a0afe2;
+}
+
+/* ---- Tables ---- */
+table {
+    border-collapse: collapse;
+}
+
+th,
+td {
+    border: 1px solid;
+    padding: 1px 2px;
+}
+
+/* ---- Forms ---- */
+.form-field {
+    display: flex;
+    flex: 1 auto;
+    max-width: 600px;
+}
+
+label {
+    margin-right: 1em;
+}
+
+input {
+    border: 1px solid #333333;
+    border-radius: 0.3em;
+    padding: 0.2em;
+    flex-grow: 1;
+}
+
+/* ---- Prompt ---- */
+.prompt-main {
+}
+
+.prompt-host {
+    display: 'block';
+    text-align: 'center';
+    font-size: 2em;
+}
+
+.prompt-requests li {
+    font-size: 1.2em;
+}
+
+.prompt-request-raw {
+    overflow: auto;
+    border: 1px solid #333333;
+    display: block;
+    padding: 1em;
+    margin-bottom: 1em;
+}
+
+.prompt-action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+}
+
+.prompt-action-buttons * {
+    margin: 0.5em;
+}
