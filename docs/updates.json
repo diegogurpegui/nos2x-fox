@@ -5,6 +5,10 @@
         {
           "version": "1.6.1",
           "update_link": "https://github.com/diegogurpegui/nos2x-fox/releases/download/v1.6.1/nos2x-fox.zip"
+        },
+        {
+          "version": "1.6.2",
+          "update_link": "https://github.com/diegogurpegui/nos2x-fox/releases/download/v1.6.2/nos2x-fox_1.6.2.xpi"
         }
       ]
     }
