@@ -18,6 +18,7 @@
   "devDependencies": {
     "esbuild": "^0.16.15",
     "esbuild-plugin-copy": "^2.0.1",
+    "esbuild-plugin-svgr": "^1.0.1",
     "esbuild-sass-plugin": "^2.4.5",
     "eslint": "^8.6.0",
     "eslint-plugin-babel": "^5.3.1",

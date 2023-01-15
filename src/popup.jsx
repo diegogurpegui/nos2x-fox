@@ -4,7 +4,7 @@ import {getPublicKey, nip19} from 'nostr-tools'
 import React, {useState, useEffect} from 'react'
 
 import logotype from './assets/logo/logotype.png'
-import copyIcon from './assets/icons/copy-outline.svg'
+import CopyIcon from './assets/icons/copy-outline.svg'
 
 function Popup() {
   let [key, setKey] = useState('')
@@ -55,23 +55,18 @@ function Popup() {
           <p>Your public key:</p>
           <div className="input public-key">
             <code>{key}</code>
-            <img
-              className="button-onlyicon"
-              src={copyIcon}
-              alt="copy"
-              title="copy"
-              onClick={clipboardCopyPubKey}
-            />
+            <button className="button-onlyicon" onClick={clipboardCopyPubKey}>
+              <CopyIcon />
+            </button>
           </div>
           <div className="input public-key">
             <code>{keyNIP19}</code>
-            <img
+            <button
               className="button-onlyicon"
-              src={copyIcon}
-              alt="copy"
-              title="copy"
               onClick={clipboardCopyPubKeyNIP19}
-            />
+            >
+              <CopyIcon />
+            </button>
           </div>
           <p>
             <a className="button" href="#" onClick={goToOptionsPage}>

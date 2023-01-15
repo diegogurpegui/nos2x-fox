@@ -61,6 +61,20 @@ button,
   font-weight: 500;
   cursor: pointer;
 
+  img,
+  svg {
+    display: inline-block;
+    max-height: 1em;
+    color: $color-primary-inv;
+    margin: 0 0.2em 0 0;
+  }
+  svg {
+    path,
+    rect {
+      stroke: $color-primary-inv;
+    }
+  }
+
   &:hover {
     background-color: $color-primary-light;
   }
@@ -72,11 +86,29 @@ button,
   text-align: center;
   text-decoration: none;
   cursor: pointer;
-  color: $color-primary-inv;
+  color: $color-primary;
   max-height: 1em;
 
   * {
-    color: $color-primary-inv;
+    color: $color-primary;
+  }
+
+  img,
+  svg {
+    display: inline-block;
+    height: 1em;
+    color: $color-primary;
+    margin: 0 0.2em 0 0;
+  }
+  svg {
+    path,
+    rect {
+      stroke: $color-primary;
+    }
+  }
+
+  &:hover {
+    background-color: transparent;
   }
 }
 
@@ -146,6 +178,7 @@ input,
     code {
       overflow: hidden;
       text-overflow: ellipsis;
+      margin-right: 0.5em;
     }
   }
 }
@@ -187,7 +220,8 @@ input,
     justify-content: space-around;
   }
 
-  .prompt-action-buttons * {
+  .prompt-action-buttons > * {
+    flex: 1 1 auto;
     margin: 0.5em;
   }
 }

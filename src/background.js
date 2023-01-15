@@ -117,8 +117,8 @@ function promptPermission(host, level, params) {
     browser.windows.create({
       url: `${browser.runtime.getURL('prompt.html')}?${qs.toString()}`,
       type: 'popup',
-      width: 340,
-      height: 330
+      width: 450,
+      height: 400
     })
 
     prompts[id] = {resolve, reject}

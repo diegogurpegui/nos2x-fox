@@ -54,6 +54,8 @@ After you build the extension, follow these steps:
 ## License and Credits
 
 LICENSE: public domain.
-Original work by [fiatjaf](https://github.com/fiatjaf)
+Original work by [fiatjaf](https://github.com/fiatjaf).
 
 Design taken from [Flydexo](https://github.com/Flydexo). See https://github.com/fiatjaf/nos2x/pull/15
+
+Icons from [IonIcons](https://ionic.io/ionicons).

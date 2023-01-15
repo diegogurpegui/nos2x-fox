@@ -4,6 +4,11 @@ import React from 'react'
 
 import {getAllowedCapabilities} from './common'
 
+import ShieldCheckmarkIcon from './assets/icons/shield-checkmark-outline.svg'
+import TimerIcon from './assets/icons/timer-outline.svg'
+import CheckmarkCircleIcon from './assets/icons/checkmark-circle-outline.svg'
+import CloseCircleIcon from './assets/icons/close-circle-outline.svg'
+
 function Prompt() {
   let qs = new URLSearchParams(location.search)
   let id = qs.get('id')
@@ -27,6 +32,22 @@ function Prompt() {
           ))}
         </ul>
       </div>
+      <div className="prompt-action-buttons">
+        <button className="button" onClick={authorizeHandler('forever')}>
+          <ShieldCheckmarkIcon /> Authorize forever
+        </button>
+        <button className="button" onClick={authorizeHandler('expirable')}>
+          <TimerIcon />
+          Authorize for 5 minutes
+        </button>
+        <button className="button" onClick={authorizeHandler('single')}>
+          <CheckmarkCircleIcon />
+          Authorize just this
+        </button>
+        <button className="button" onClick={authorizeHandler('no')}>
+          <CloseCircleIcon /> Reject
+        </button>
+      </div>
       {params && (
         <>
           <p>now acting on</p>
@@ -35,20 +56,6 @@ function Prompt() {
           </pre>
         </>
       )}
-      <div className="prompt-action-buttons">
-        <button className="button" onClick={authorizeHandler('forever')}>
-          ✅ Authorize forever
-        </button>
-        <button className="button" onClick={authorizeHandler('expirable')}>
-          🕐 Authorize for 5 minutes
-        </button>
-        <button className="button" onClick={authorizeHandler('single')}>
-          ☑️ Authorize just this
-        </button>
-        <button className="button" onClick={authorizeHandler('no')}>
-          ❌ Reject
-        </button>
-      </div>
     </>
   )
 

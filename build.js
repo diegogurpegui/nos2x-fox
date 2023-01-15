@@ -3,6 +3,7 @@
 const esbuild = require('esbuild')
 const {sassPlugin} = require('esbuild-sass-plugin')
 const {copy} = require('esbuild-plugin-copy')
+const svgrPlugin = require('esbuild-plugin-svgr')
 
 const prod = process.argv.indexOf('prod') !== -1
 
@@ -23,11 +24,12 @@ esbuild
     outdir: './dist',
     loader: {
       ['.png']: 'dataurl',
-      ['.svg']: 'dataurl',
+      ['.svg']: 'text',
       ['.ttf']: 'file'
     },
     plugins: [
       sassPlugin(),
+      svgrPlugin(),
       copy({
         assets: [
           {
