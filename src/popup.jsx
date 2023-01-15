@@ -5,6 +5,7 @@ import React, {useState, useEffect} from 'react'
 
 import logotype from './assets/logo/logotype.png'
 import CopyIcon from './assets/icons/copy-outline.svg'
+import CogIcon from './assets/icons/cog-outline.svg'
 
 function Popup() {
   let [key, setKey] = useState('')
@@ -70,7 +71,7 @@ function Popup() {
           </div>
           <p>
             <a className="button" href="#" onClick={goToOptionsPage}>
-              ⚙️ Options
+              <CogIcon className="svg-fill" /> Options
             </a>
           </p>
         </>

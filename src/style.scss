@@ -50,7 +50,10 @@ code {
 
 button,
 .button {
-  display: block;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
   border: 2px solid $color-primary;
   background-color: $color-primary;
   color: $color-primary-inv;
@@ -65,14 +68,19 @@ button,
   img,
   svg {
     display: inline-block;
-    max-height: 1em;
+    height: 1em;
     color: $color-primary-inv;
-    margin: 0 0.2em 0 0;
+    margin: 0 0.2em 0 0.2em;
   }
   svg {
     path,
     rect {
       stroke: $color-primary-inv;
+    }
+
+    &.svg-fill path,
+    rect {
+      fill: $color-primary-inv;
     }
   }
 
@@ -117,7 +125,7 @@ button,
   border-radius: 1em;
   background-color: $color-primary;
   color: $color-primary-inv;
-  padding: 0.5em 1.0em;
+  padding: 0.5em 1em;
   font-size: 0.7em;
 
   &.disabled {
@@ -155,7 +163,7 @@ input,
   display: flex;
   flex-direction: column;
 
-  * {
+  & > * {
     margin-bottom: 0.5em;
   }
 }

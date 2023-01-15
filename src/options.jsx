@@ -5,6 +5,7 @@ import {generatePrivateKey} from 'nostr-tools'
 
 import {getPermissionsString, readPermissions} from './common'
 import logotype from './assets/logo/logotype.png'
+import DiceIcon from './assets/icons/dice-outline.svg'
 
 function Options() {
   let [key, setKey] = useState('')
@@ -69,7 +70,9 @@ function Options() {
           <label htmlFor="private-key">Private key:</label>
           <div className="input-group">
             <input id="private-key" value={key} onChange={handleKeyChange} />
-            <button onClick={generateRandomPrivateKey}>🎲 Generate</button>
+            <button onClick={generateRandomPrivateKey}>
+              <DiceIcon /> Generate
+            </button>
           </div>
         </div>
         {permissions?.length > 0 && (
