@@ -3,6 +3,7 @@ import {render} from 'react-dom'
 import React from 'react'
 
 import {getAllowedCapabilities} from './common'
+import {KindNames} from './types'
 
 import ShieldCheckmarkIcon from './assets/icons/shield-checkmark-outline.svg'
 import TimerIcon from './assets/icons/timer-outline.svg'
@@ -10,21 +11,31 @@ import CheckmarkCircleIcon from './assets/icons/checkmark-circle-outline.svg'
 import CloseCircleIcon from './assets/icons/close-circle-outline.svg'
 
 function Prompt() {
-  let qs = new URLSearchParams(location.search)
-  let id = qs.get('id')
-  let host = qs.get('host')
-  let level = parseInt(qs.get('level'))
-  let params
+  const qs = new URLSearchParams(location.search)
+  const id = qs.get('id')
+  const host = qs.get('host')
+  const level = parseInt(qs.get('level'))
+  let params = null
+  let kindName = null
+  let kind = null
   try {
     params = JSON.parse(qs.get('params'))
+    kind = params.event.kind
+    kindName = KindNames[kind]
   } catch (err) {
-    params = null
+    console.error('Error parsing params.')
   }
 
   return (
     <>
       <div>
-        <b class="prompt-host">{host}</b>{' '}
+        <h1 class="prompt-host">{host}</h1>
+        <p>
+          Event:{' '}
+          <span class="badge">
+            {kindName ?? `(not recognized. Kind: ${kind})`}
+          </span>
+        </p>
         <p>is requesting your permission to:</p>
         <ul class="prompt-requests">
           {getAllowedCapabilities(level).map(cap => (
