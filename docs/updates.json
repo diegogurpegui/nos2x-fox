@@ -1,0 +1,12 @@
+{
+  "addons": {
+    "{fdacee2c-bab4-490d-bc4b-ecdd03d5d68a}": {
+      "updates": [
+        {
+          "version": "1.6.1",
+          "update_link": "https://github.com/diegogurpegui/nos2x-fox/releases/download/v1.6.1/nos2x-fox.zip"
+        }
+      ]
+    }
+  }
+}
