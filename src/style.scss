@@ -1,23 +1,22 @@
 // ****** Variables *****
 $color-primary: #0c1c25;
 $color-primary-inv: #ffffff;
-$color-primary-light: #0B2D40;
+$color-primary-light: #0b2d40;
 $color-text: #0c1c25;
 $background-color: #ffffff;
 
 $font-family: 'Prompt', Arial, Helvetica, sans-serif;
 $font-size: 12pt;
 
-
 // ****** Font ******
 @font-face {
-  font-family: "Prompt";
+  font-family: 'Prompt';
   src: url('assets/fonts/Prompt-Regular.ttf');
   font-weight: normal;
   font-style: normal;
 }
 @font-face {
-  font-family: "Prompt";
+  font-family: 'Prompt';
   src: url('assets/fonts/Prompt-Bold.ttf');
   font-weight: bold;
   font-style: normal;
@@ -48,9 +47,10 @@ code {
   margin: 1em;
 }
 
+button,
 .button {
   display: block;
-  // border: 1px solid $color-primary;
+  border: 2px solid $color-primary;
   background-color: $color-primary;
   color: $color-primary-inv;
   padding: 0.5em 0.7em;
@@ -63,6 +63,20 @@ code {
 
   &:hover {
     background-color: $color-primary-light;
+  }
+}
+.button-onlyicon {
+  border: 0 none;
+  background-color: transparent;
+  padding: 0.1em;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  color: $color-primary-inv;
+  max-height: 1em;
+
+  * {
+    color: $color-primary-inv;
   }
 }
 
@@ -83,10 +97,12 @@ label {
   margin-right: 1em;
 }
 
-input {
+input,
+.input {
   border: 2px solid $color-primary;
   border-radius: 0.3em;
-  padding: 0.5em 0.7em;
+  padding: 0.5em 1em;
+  display: flex;
   flex-grow: 1;
 }
 
@@ -99,12 +115,38 @@ input {
   }
 }
 
+.input-group {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: stretch;
+
+  input {
+    flex: 1 1 auto;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+  button {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    margin-left: calc(var(--bs-border-width) * -1);
+  }
+}
+
 /* ---- Popup ---- */
 .popup-main {
-  max-width: 600px;
+  max-width: 640px;
 
   h1 img {
     max-height: 50px;
+  }
+
+  .public-key {
+    margin-bottom: 1em;
+    code {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
   }
 }
 

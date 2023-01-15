@@ -23,7 +23,7 @@ esbuild
     outdir: './dist',
     loader: {
       ['.png']: 'dataurl',
-      ['.svg']: 'text',
+      ['.svg']: 'dataurl',
       ['.ttf']: 'file'
     },
     plugins: [
@@ -33,6 +33,10 @@ esbuild
           {
             from: ['./src/*.html', './src/manifest.json'],
             to: ['./']
+          },
+          {
+            from: ['./src/assets/logo/*'],
+            to: ['./assets/logo']
           },
           {
             from: ['./src/assets/icons/*'],

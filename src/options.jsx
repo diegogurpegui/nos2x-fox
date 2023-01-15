@@ -1,9 +1,10 @@
 import browser from 'webextension-polyfill'
 import React, {useState, useEffect} from 'react'
 import {render} from 'react-dom'
+import {generatePrivateKey} from 'nostr-tools'
 
 import {getPermissionsString, readPermissions} from './common'
-import logotype from './assets/icons/logotype.png'
+import logotype from './assets/logo/logotype.png'
 
 function Options() {
   let [key, setKey] = useState('')
@@ -30,8 +31,8 @@ function Options() {
       )
     })
   }, [])
-  async function handleKeyChange(e) {
-    let key = e.target.value.toLowerCase().trim()
+
+  async function savePrivateKey(key) {
     setKey(key)
 
     if (key.match(/^[a-f0-9]{64}$/) || key === '') {
@@ -43,6 +44,15 @@ function Options() {
     } else {
       setMessage('The key is not valid.')
     }
+  }
+
+  async function handleKeyChange(e) {
+    let key = e.target.value.toLowerCase().trim()
+    savePrivateKey(key)
+  }
+
+  async function generateRandomPrivateKey() {
+    savePrivateKey(generatePrivateKey())
   }
 
   return (
@@ -57,7 +67,10 @@ function Options() {
         <h2>Options</h2>
         <div className="form-field">
           <label htmlFor="private-key">Private key:</label>
-          <input id="private-key" value={key} onChange={handleKeyChange} />
+          <div className="input-group">
+            <input id="private-key" value={key} onChange={handleKeyChange} />
+            <button onClick={generateRandomPrivateKey}>🎲 Generate</button>
+          </div>
         </div>
         {permissions?.length > 0 && (
           <>
@@ -90,7 +103,7 @@ function Options() {
             </table>
           </>
         )}
-        {message && <div class="info-message">ℹ️ {message}</div>}
+        {message && <div className="info-message">ℹ️ {message}</div>}
       </main>
     </>
   )
