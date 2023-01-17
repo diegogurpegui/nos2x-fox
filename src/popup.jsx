@@ -59,25 +59,29 @@ function Popup() {
       ) : (
         <>
           <p>Your public key:</p>
-          {selectedKey === 'hex' ? <div className="input public-key">
-            <code>{`${key.substring(0, 15)}…${key.substring(-10, 10)}`}</code>
-            <button className="button-onlyicon" onClick={clipboardCopyPubKey}>
-              <CopyIcon />
-            </button>
-          </div> :
-          <div className="input public-key">
-            <code>{`${keyNIP19.substring(0, 15)}…${keyNIP19.substring(-10, 10)}`}</code>
-            <button
-              className="button-onlyicon"
-              onClick={clipboardCopyPubKeyNIP19}
-            >
-              <CopyIcon />
-            </button>
-          </div> }
-          <select value={selectedKey} onChange={handleChange}>
-            <option value="hex">hex</option>
-            <option value="npub">npub</option>
-          </select>
+          <div className="public-key">
+            {selectedKey === 'hex' ? <div className="input">
+              <code>{`${key.substring(0, 15)}…${key.substring((key.length - 10))}`}</code>
+              <button className="button-onlyicon" onClick={clipboardCopyPubKey}>
+                <CopyIcon />
+              </button>
+            </div> :
+            <div className="input">
+              <code>{`${keyNIP19.substring(0, 15)}…${keyNIP19.substring((keyNIP19.length -10))}`}</code>
+              <button
+                className="button-onlyicon"
+                onClick={clipboardCopyPubKeyNIP19}
+              >
+                <CopyIcon />
+              </button>
+            </div> }
+            <div className="select key-options">
+              <select value={selectedKey} onChange={handleChange}>
+                <option value="hex">hex</option>
+                <option value="npub">npub</option>
+              </select>
+            </div>
+          </div>
           <p>
             <a className="button" href="#" onClick={goToOptionsPage}>
               <CogIcon className="svg-fill" /> Options
