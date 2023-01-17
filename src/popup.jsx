@@ -10,7 +10,7 @@ import CogIcon from './assets/icons/cog-outline.svg'
 function Popup() {
   let [key, setKey] = useState('')
   let [keyNIP19, setKeyNIP19] = useState('')
-  let [selectedKey, setSelectedKey] = useState('npub')
+  let [selectedKeyType, setSelectedKeyType] = useState('npub')
 
   useEffect(() => {
     browser.storage.local.get('private_key').then(results => {
@@ -25,8 +25,8 @@ function Popup() {
     })
   }, [])
 
-  function handleChange(event) {
-    setSelectedKey(event.target.value)
+  function handleKeyTypeSelect(event) {
+    setSelectedKeyType(event.target.value)
   }
 
   function goToOptionsPage() {
@@ -60,23 +60,14 @@ function Popup() {
         <>
           <p>Your public key:</p>
           <div className="public-key">
-            {selectedKey === 'hex' ? <div className="input">
-              <code>{`${key.substring(0, 15)}…${key.substring((key.length - 10))}`}</code>
-              <button className="button-onlyicon" onClick={clipboardCopyPubKey}>
-                <CopyIcon />
-              </button>
-            </div> :
             <div className="input">
-              <code>{`${keyNIP19.substring(0, 15)}…${keyNIP19.substring((keyNIP19.length -10))}`}</code>
-              <button
-                className="button-onlyicon"
-                onClick={clipboardCopyPubKeyNIP19}
-              >
+              <code>{`${(selectedKeyType === 'hex' ? key : keyNIP19).substring(0, 15)}…${(selectedKeyType === 'hex' ? key : keyNIP19).substring(((selectedKeyType === 'hex' ? key : keyNIP19).length - 10))}`}</code>
+              <button className="button-onlyicon" onClick={(selectedKeyType === 'hex' ? clipboardCopyPubKey : clipboardCopyPubKeyNIP19)}>
                 <CopyIcon />
               </button>
-            </div> }
+            </div>
             <div className="select key-options">
-              <select value={selectedKey} onChange={handleChange}>
+              <select value={selectedKeyType} onChange={handleKeyTypeSelect}>
                 <option value="hex">hex</option>
                 <option value="npub">npub</option>
               </select>
