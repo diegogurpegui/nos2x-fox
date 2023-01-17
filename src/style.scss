@@ -153,8 +153,10 @@ label {
 input,
 .input {
   border: 2px solid $color-primary;
+  border-right: 0;
   border-radius: 0.3em;
-  padding: 0.5em 1em;
+  background-color: $background-color;
+  padding: 0.5em 1em 0.5em;
   display: flex;
   flex-grow: 1;
 }
@@ -196,12 +198,26 @@ input,
 
   .public-key {
     margin-bottom: 1em;
-    code {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      margin-right: 0.5em;
-    }
+    background-color: $color-primary;
+    border: 0px solid;
+    border-radius: 0.3em;
+    display: flex;
   }
+
+  code {
+    margin-right: 0.5em;
+  }
+}
+
+select {
+  background-color: $color-primary;
+  border: 2px solid $color-primary;
+  border-top-right-radius: 0.3em;
+  border-bottom-right-radius: 0.3em;
+  color: $color-primary-inv;
+  padding: 0.5em 1em;
+  display: flex;
+  flex-grow: 1;
 }
 
 /* ---- Options ---- */
