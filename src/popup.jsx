@@ -10,6 +10,7 @@ import CogIcon from './assets/icons/cog-outline.svg'
 function Popup() {
   let [key, setKey] = useState('')
   let [keyNIP19, setKeyNIP19] = useState('')
+  let [selectedKey, setSelectedKey] = useState('npub')
 
   useEffect(() => {
     browser.storage.local.get('private_key').then(results => {
@@ -23,6 +24,10 @@ function Popup() {
       }
     })
   }, [])
+
+  function handleChange(event) {
+    setSelectedKey(event.target.value)
+  }
 
   function goToOptionsPage() {
     browser.tabs.create({
@@ -54,21 +59,25 @@ function Popup() {
       ) : (
         <>
           <p>Your public key:</p>
-          <div className="input public-key">
-            <code>{key}</code>
+          {selectedKey === 'hex' ? <div className="input public-key">
+            <code>{`${key.substring(0, 15)}…${key.substring(-10, 10)}`}</code>
             <button className="button-onlyicon" onClick={clipboardCopyPubKey}>
               <CopyIcon />
             </button>
-          </div>
+          </div> :
           <div className="input public-key">
-            <code>{keyNIP19}</code>
+            <code>{`${keyNIP19.substring(0, 15)}…${keyNIP19.substring(-10, 10)}`}</code>
             <button
               className="button-onlyicon"
               onClick={clipboardCopyPubKeyNIP19}
             >
               <CopyIcon />
             </button>
-          </div>
+          </div> }
+          <select value={selectedKey} onChange={handleChange}>
+            <option value="hex">hex</option>
+            <option value="npub">npub</option>
+          </select>
           <p>
             <a className="button" href="#" onClick={goToOptionsPage}>
               <CogIcon className="svg-fill" /> Options
