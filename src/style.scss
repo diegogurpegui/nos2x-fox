@@ -151,12 +151,18 @@ label {
 }
 
 input,
-.input {
+.input, .pubkey-show {
   border: 2px solid $color-primary;
+  border-right: 0;
   border-radius: 0.3em;
+  background-color: $background-color;
   padding: 0.5em 1em;
   display: flex;
   flex-grow: 1;
+}
+
+.pubkey-show {
+  padding: 0.7em 1em;
 }
 
 .form-field {
@@ -196,10 +202,29 @@ input,
 
   .public-key {
     margin-bottom: 1em;
+    background-color: $color-primary;
+    border: 0px solid;
+    border-radius: 0.3em;
+    display: flex;
+    
     code {
-      overflow: hidden;
-      text-overflow: ellipsis;
       margin-right: 0.5em;
+    }
+  }
+
+  select {
+    background-color: $color-primary;
+    border: 2px solid $color-primary;
+    border-top-right-radius: 0.3em;
+    border-bottom-right-radius: 0.3em;
+    color: $color-primary-inv;
+    padding: 0.5em 1em;
+    display: flex;
+    flex-grow: 1;
+
+    &:hover {
+      cursor: pointer;
+      background-color: $color-primary-light;
     }
   }
 }

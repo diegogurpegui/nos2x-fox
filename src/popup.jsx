@@ -10,6 +10,7 @@ import CogIcon from './assets/icons/cog-outline.svg'
 function Popup() {
   let [key, setKey] = useState('')
   let [keyNIP19, setKeyNIP19] = useState('')
+  let [selectedKeyType, setSelectedKeyType] = useState('npub')
 
   useEffect(() => {
     browser.storage.local.get('private_key').then(results => {
@@ -23,6 +24,10 @@ function Popup() {
       }
     })
   }, [])
+
+  function handleKeyTypeSelect(event) {
+    setSelectedKeyType(event.target.value)
+  }
 
   function goToOptionsPage() {
     browser.tabs.create({
@@ -54,20 +59,19 @@ function Popup() {
       ) : (
         <>
           <p>Your public key:</p>
-          <div className="input public-key">
-            <code>{key}</code>
-            <button className="button-onlyicon" onClick={clipboardCopyPubKey}>
-              <CopyIcon />
-            </button>
-          </div>
-          <div className="input public-key">
-            <code>{keyNIP19}</code>
-            <button
-              className="button-onlyicon"
-              onClick={clipboardCopyPubKeyNIP19}
-            >
-              <CopyIcon />
-            </button>
+          <div className="public-key">
+            <div className="pubkey-show">
+              <code>{`${(selectedKeyType === 'hex' ? key : keyNIP19).substring(0, 15)}…${(selectedKeyType === 'hex' ? key : keyNIP19).substring(((selectedKeyType === 'hex' ? key : keyNIP19).length - 10))}`}</code>
+              <button className="button-onlyicon" onClick={(selectedKeyType === 'hex' ? clipboardCopyPubKey : clipboardCopyPubKeyNIP19)}>
+                <CopyIcon />
+              </button>
+            </div>
+            <div className="select key-options">
+              <select value={selectedKeyType} onChange={handleKeyTypeSelect}>
+                <option value="npub">npub</option>
+                <option value="hex">hex</option>
+              </select>
+            </div>
           </div>
           <p>
             <a className="button" href="#" onClick={goToOptionsPage}>
