@@ -60,7 +60,7 @@ function Popup() {
         <>
           <p>Your public key:</p>
           <div className="public-key">
-            <div className="input">
+            <div className="pubkey-show">
               <code>{`${(selectedKeyType === 'hex' ? key : keyNIP19).substring(0, 15)}…${(selectedKeyType === 'hex' ? key : keyNIP19).substring(((selectedKeyType === 'hex' ? key : keyNIP19).length - 10))}`}</code>
               <button className="button-onlyicon" onClick={(selectedKeyType === 'hex' ? clipboardCopyPubKey : clipboardCopyPubKeyNIP19)}>
                 <CopyIcon />
@@ -68,8 +68,8 @@ function Popup() {
             </div>
             <div className="select key-options">
               <select value={selectedKeyType} onChange={handleKeyTypeSelect}>
-                <option value="hex">hex</option>
                 <option value="npub">npub</option>
+                <option value="hex">hex</option>
               </select>
             </div>
           </div>
