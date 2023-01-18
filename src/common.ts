@@ -81,3 +81,13 @@ export async function updatePermission(host, permission) {
     }
   })
 }
+
+export function truncatePublicKeys(
+  publicKey: String,
+  startCount: number = 15,
+  endCount: number = 15
+): String {
+  return `${publicKey.substring(0, startCount)}…${publicKey.substring(
+    publicKey.length - endCount
+  )}`
+}

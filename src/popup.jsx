@@ -3,6 +3,8 @@ import {render} from 'react-dom'
 import {getPublicKey, nip19} from 'nostr-tools'
 import React, {useState, useEffect} from 'react'
 
+import {truncatePublicKeys} from './common'
+
 import logotype from './assets/logo/logotype.png'
 import CopyIcon from './assets/icons/copy-outline.svg'
 import CogIcon from './assets/icons/cog-outline.svg'
@@ -37,10 +39,7 @@ function Popup() {
   }
 
   function clipboardCopyPubKey() {
-    navigator.clipboard.writeText(key)
-  }
-  function clipboardCopyPubKeyNIP19() {
-    navigator.clipboard.writeText(keyNIP19)
+    navigator.clipboard.writeText(selectedKeyType === 'hex' ? key : keyNIP19)
   }
 
   return (
@@ -61,8 +60,10 @@ function Popup() {
           <p>Your public key:</p>
           <div className="public-key">
             <div className="pubkey-show">
-              <code>{`${(selectedKeyType === 'hex' ? key : keyNIP19).substring(0, 15)}…${(selectedKeyType === 'hex' ? key : keyNIP19).substring(((selectedKeyType === 'hex' ? key : keyNIP19).length - 10))}`}</code>
-              <button className="button-onlyicon" onClick={(selectedKeyType === 'hex' ? clipboardCopyPubKey : clipboardCopyPubKeyNIP19)}>
+              <code>
+                {truncatePublicKeys(selectedKeyType === 'hex' ? key : keyNIP19)}
+              </code>
+              <button className="button-onlyicon" onClick={clipboardCopyPubKey}>
                 <CopyIcon />
               </button>
             </div>

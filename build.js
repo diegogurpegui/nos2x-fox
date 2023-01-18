@@ -13,8 +13,9 @@ esbuild
     entryPoints: {
       background: './src/background.js',
       'content-script': './src/content-script.js',
-      common: './src/common.js',
       'nostr-provider': './src/nostr-provider.js',
+      types: './src/types.ts',
+      common: './src/common.ts',
       popup: './src/popup.jsx',
       prompt: './src/prompt.jsx',
       options: './src/options.jsx',
