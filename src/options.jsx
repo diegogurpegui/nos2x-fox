@@ -3,6 +3,8 @@ import React, {useState, useEffect} from 'react'
 import {render} from 'react-dom'
 import {generatePrivateKey} from 'nostr-tools'
 
+import {Alert} from './alert'
+
 import {getPermissionsString, readPermissions} from './common'
 import logotype from './assets/logo/logotype.png'
 import DiceIcon from './assets/icons/dice-outline.svg'
@@ -13,6 +15,7 @@ function Options() {
   let [key, setKey] = useState('')
   let [permissions, setPermissions] = useState()
   let [message, setMessage] = useState('')
+  let [messageType, setMessageType] = useState('info')
 
   useEffect(() => {
     browser.storage.local.get(['private_key']).then(results => {
@@ -42,9 +45,11 @@ function Options() {
       await browser.storage.local.set({
         private_key: key
       })
-      setMessage('saved!')
-      setTimeout(setMessage, 3000)
+      setMessageType('success')
+      setMessage('Key saved!')
+      setTimeout(setMessage, 3000) // clean message
     } else {
+      setMessageType('warning')
       setMessage('The key is not valid.')
     }
   }
@@ -108,7 +113,7 @@ function Options() {
             </table>
           </>
         )}
-        {message && <div className="info-message">ℹ️ {message}</div>}
+        {message && <Alert message={message} type={messageType} />}
       </main>
       <footer>version {manifest.version}</footer>
     </>

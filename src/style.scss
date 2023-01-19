@@ -4,6 +4,12 @@ $color-primary-inv: #ffffff;
 $color-primary-light: #0b2d40;
 $color-primary-disabled: #394a53;
 $color-text: #0c1c25;
+$color-info: #aebef5;
+$color-info-dark: #7381ad;
+$color-warning: #f08046;
+$color-warning-dark: #5f321b;
+$color-success: #46f07f;
+$color-success-dark: #1c5e32;
 $background-color: #ffffff;
 
 $font-family: 'Prompt', Arial, Helvetica, sans-serif;
@@ -41,11 +47,29 @@ code {
 }
 
 /* ---- General styles ---- */
-.info-message {
-  border: 1px solid #84a1ff;
+.alert {
   padding: 0.5em 0.7em;
-  background-color: #cbd7ff;
-  margin: 1em;
+  border-radius: 0.3em;
+  background-color: $color-info;
+  border: 2px solid $color-info-dark;
+  margin-top: 1em;
+  margin-bottom: 1em;
+
+  svg {
+    display: inline-block;
+    height: 1em;
+    margin: 0 0.2em 0 0.2em;
+  }
+
+  &.warning {
+    background-color: $color-warning;
+    border-color: $color-warning-dark;
+  }
+
+  &.success {
+    background-color: $color-success;
+    border-color: $color-success-dark;
+  }
 }
 
 button,
@@ -141,7 +165,7 @@ table {
 th,
 td {
   border: 1px solid;
-  padding: 1px 2px;
+  padding: 0.2em 0.5em;
 }
 
 /* ---- Forms ---- */
