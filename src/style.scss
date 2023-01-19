@@ -151,7 +151,8 @@ label {
 }
 
 input,
-.input, .pubkey-show {
+.input,
+.pubkey-show {
   border: 2px solid $color-primary;
   border-right: 0;
   border-radius: 0.3em;
@@ -206,7 +207,7 @@ input,
     border: 0px solid;
     border-radius: 0.3em;
     display: flex;
-    
+
     code {
       margin-right: 0.5em;
     }
@@ -230,13 +231,33 @@ input,
 }
 
 /* ---- Options ---- */
-.options-main {
-  max-width: 800px;
-  margin-left: auto;
-  margin-right: auto;
+#options-page {
+  & {
+    width: 100%;
+    height: 100%;
+  }
 
-  header {
-    text-align: center;
+  #main {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    min-height: 100%;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+
+    header {
+      text-align: center;
+    }
+
+    main {
+      flex-grow: 1;
+    }
+
+    footer {
+      text-align: center;
+      padding-bottom: 1em;
+    }
   }
 }
 

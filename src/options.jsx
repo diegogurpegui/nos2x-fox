@@ -7,6 +7,8 @@ import {getPermissionsString, readPermissions} from './common'
 import logotype from './assets/logo/logotype.png'
 import DiceIcon from './assets/icons/dice-outline.svg'
 
+import manifest from './manifest.json'
+
 function Options() {
   let [key, setKey] = useState('')
   let [permissions, setPermissions] = useState()
@@ -108,6 +110,7 @@ function Options() {
         )}
         {message && <div className="info-message">ℹ️ {message}</div>}
       </main>
+      <footer>version {manifest.version}</footer>
     </>
   )
 }
