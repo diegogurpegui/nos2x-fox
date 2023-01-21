@@ -1,3 +1,4 @@
+![](src/assets/logo/logotype.png)
 # nos2x-fox (nos2x for Forefox)
 notes and other stuff signed by an extension
 
