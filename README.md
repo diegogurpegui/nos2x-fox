@@ -19,9 +19,8 @@ async window.nostr.nip04.decrypt(pubkey, ciphertext): string // takes ciphertext
 
 ## Install
 
-* Look into [Releases](https://github.com/diegogurpegui/nos2x-fox/releases)
-* [Original Firefox Add-on](https://addons.mozilla.org/en-US/firefox/addon/nos2x/)
-  This is the one originally published by **fiatjaf**.
+* By yourself from file: look into [Releases](https://github.com/diegogurpegui/nos2x-fox/releases)
+* From the site [Firefox Add-on](https://addons.mozilla.org/en-US/firefox/addon/nos2x-fox/)
 
 ## Develop
 
