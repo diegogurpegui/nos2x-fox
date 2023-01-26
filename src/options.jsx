@@ -6,7 +6,11 @@ import {generatePrivateKey} from 'nostr-tools'
 
 import {Alert} from './alert'
 
-import {getPermissionsString, readPermissions} from './common'
+import {
+  getPermissionsString,
+  readPermissions,
+  removePermissions
+} from './common'
 import logotype from './assets/logo/logotype.png'
 import DiceIcon from './assets/icons/dice-outline.svg'
 
@@ -41,18 +45,7 @@ function Options() {
   }, [])
 
   useEffect(() => {
-    readPermissions().then(permissions => {
-      setPermissions(
-        Object.entries(permissions).map(
-          ([host, {level, condition, created_at}]) => ({
-            host,
-            level,
-            condition,
-            created_at
-          })
-        )
-      )
-    })
+    loadPermissions()
   }, [])
 
   const showMessage = useCallback((msg, type = 'info', timeout = 3000) => {
@@ -90,6 +83,31 @@ function Options() {
   async function handleKeyChange(e) {
     let key = e.target.value.toLowerCase().trim()
     savePrivateKey(key)
+  }
+
+  async function handleRevoke(e) {
+    e.preventDefault()
+    let host = e.target.dataset.domain
+    if (window.confirm(`Revoke all permissions from ${host}?`)) {
+      await removePermissions(host)
+      showMessage(`Removed permissions from ${host}`)
+      loadPermissions()
+    }
+  }
+
+  function loadPermissions() {
+    readPermissions().then(permissions => {
+      setPermissions(
+        Object.entries(permissions).map(
+          ([host, {level, condition, created_at}]) => ({
+            host,
+            level,
+            condition,
+            created_at
+          })
+        )
+      )
+    })
   }
 
   async function generateRandomPrivateKey() {
@@ -155,10 +173,11 @@ function Options() {
               <table>
                 <thead>
                   <tr>
-                    <th>domain</th>
-                    <th>permissions</th>
-                    <th>condition</th>
-                    <th>since</th>
+                    <th>Domain</th>
+                    <th>Permissions</th>
+                    <th>Condition</th>
+                    <th>Since</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -173,6 +192,11 @@ function Options() {
                           .split('.')[0]
                           .split('T')
                           .join(' ')}
+                      </td>
+                      <td>
+                        <button onClick={handleRevoke} data-domain={host}>
+                          revoke
+                        </button>
                       </td>
                     </tr>
                   ))}

@@ -66,11 +66,11 @@ export async function readPermissions() {
   return permissions
 }
 
-export async function readPermissionLevel(host) {
+export async function readPermissionLevel(host: string) {
   return (await readPermissions())[host]?.level || 0
 }
 
-export async function updatePermission(host, permission) {
+export async function updatePermission(host: string, permission) {
   browser.storage.local.set({
     permissions: {
       ...((await browser.storage.local.get('permissions').permissions) || {}),
@@ -80,6 +80,12 @@ export async function updatePermission(host, permission) {
       }
     }
   })
+}
+
+export async function removePermissions(host: string) {
+  let {permissions = {}} = await browser.storage.local.get('permissions')
+  delete permissions[host]
+  browser.storage.local.set({permissions})
 }
 
 export function truncatePublicKeys(
