@@ -13,6 +13,7 @@ import {
 } from './common'
 import logotype from './assets/logo/logotype.png'
 import DiceIcon from './assets/icons/dice-outline.svg'
+import RadioIcon from './assets/icons/radio-outline.svg'
 
 import manifest from './manifest.json'
 
@@ -210,29 +211,34 @@ function Options() {
 
         <section>
           <h3>Preferred relays</h3>
-          {relays.map(({url, policy}, i) => (
-            <div key={i} style={{display: 'flex'}}>
-              <input value={url} onChange={changeRelayURL.bind(null, i)} />
-              <label>
-                read
-                <input
-                  type="checkbox"
-                  checked={policy.read}
-                  onChange={toggleRelayPolicy.bind(null, i, 'read')}
-                />
-              </label>
-              <label>
-                write
-                <input
-                  type="checkbox"
-                  checked={policy.write}
-                  onChange={toggleRelayPolicy.bind(null, i, 'write')}
-                />
-              </label>
-            </div>
-          ))}
-          <div style={{display: 'flex'}}>
+          <div className="relays-list">
+            {relays.map(({url, policy}, i) => (
+              <div key={i} className="relays-list-item">
+                <RadioIcon />
+                <input value={url} onChange={changeRelayURL.bind(null, i)} />
+                <label>
+                  read
+                  <input
+                    type="checkbox"
+                    checked={policy.read}
+                    onChange={toggleRelayPolicy.bind(null, i, 'read')}
+                  />
+                </label>
+                <label>
+                  write
+                  <input
+                    type="checkbox"
+                    checked={policy.write}
+                    onChange={toggleRelayPolicy.bind(null, i, 'write')}
+                  />
+                </label>
+              </div>
+            ))}
+          </div>
+          <div className="form-field">
+            <label htmlFor="new-relay-url">New relay URL:</label>
             <input
+              id="new-relay-url"
               value={newRelayURL}
               onChange={e => setNewRelayURL(e.target.value)}
               onBlur={addNewRelay}

@@ -42,6 +42,10 @@ h2 {
   font-size: 1.5em;
 }
 
+h3 {
+  font-size: 1.2em;
+}
+
 code {
   font-family: 'Courier New', Courier, monospace;
 }
@@ -178,7 +182,6 @@ input,
 .input,
 .pubkey-show {
   border: 2px solid $color-primary;
-  border-right: 0;
   border-radius: 0.3em;
   background-color: $background-color;
   padding: 0.5em 1em;
@@ -209,6 +212,7 @@ input,
     flex: 1 1 auto;
     border-top-right-radius: 0;
     border-bottom-right-radius: 0;
+    border-right: 0;
   }
   button {
     border-top-left-radius: 0;
@@ -276,6 +280,26 @@ input,
 
     main {
       flex-grow: 1;
+
+      .relays-list {
+        display: flex;
+        flex-direction: column;
+
+        .relays-list-item {
+          display: flex;
+          flex-direction: row;
+          margin-bottom: 0.5em;
+          svg {
+            max-height: 2em;
+            align-self: center;
+            margin-right: 0.5em;
+          }
+          input {
+            flex-grow: 1;
+            margin-right: 0.5em;
+          }
+        }
+      }
     }
 
     footer {
