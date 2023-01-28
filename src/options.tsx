@@ -2,9 +2,8 @@ import browser from 'webextension-polyfill';
 import React, { useState, useCallback, useEffect } from 'react';
 import { render } from 'react-dom';
 import { useDebouncedCallback } from 'use-debounce';
-import { generatePrivateKey } from 'nostr-tools';
+import { generatePrivateKey, nip19 } from 'nostr-tools';
 
-import { PermissionConfig } from './types';
 import { Alert } from './alert';
 
 import {
@@ -25,6 +24,7 @@ type RelayConfig = {
 
 function Options() {
   let [key, setKey] = useState('');
+  let [isKeyHidden, setKeyHidden] = useState(true);
   let [relays, setRelays] = useState([]);
   let [newRelayURL, setNewRelayURL] = useState('');
   let [permissions, setPermissions] = useState();
@@ -37,7 +37,7 @@ function Options() {
 
   useEffect(() => {
     browser.storage.local.get(['private_key', 'relays']).then(results => {
-      if (results.private_key) setKey(results.private_key);
+      if (results.private_key) setKey(nip19.nsecEncode(results.private_key));
       if (results.relays) {
         let relaysList: RelayConfig[] = [];
         for (let url in results.relays) {
@@ -74,22 +74,30 @@ function Options() {
     showMessage('saved relays!');
   }, 700);
 
-  async function savePrivateKey(key) {
-    setKey(key);
+  async function savePrivateKey() {
+    if (!isKeyValid()) return;
 
-    if (key.match(/^[a-f0-9]{64}$/) || key === '') {
-      await browser.storage.local.set({
-        private_key: key
-      });
-      showMessage('Key saved!', 'success');
-    } else {
-      showMessage('The key is not valid.', 'warning', 0);
+    let hexOrEmptyKey = key;
+
+    try {
+      let { type, data } = nip19.decode(key);
+      if (type === 'nsec') hexOrEmptyKey = data;
+    } catch (_) {}
+
+    await browser.storage.local.set({
+      private_key: hexOrEmptyKey
+    });
+
+    if (hexOrEmptyKey !== '') {
+      setKey(nip19.nsecEncode(hexOrEmptyKey));
     }
+
+    showMessage('Saved private key!', 'success');
   }
 
   async function handleKeyChange(e) {
     let key = e.target.value.toLowerCase().trim();
-    savePrivateKey(key);
+    setKey(key);
   }
 
   async function handleRevoke(e) {
@@ -118,7 +126,7 @@ function Options() {
   }
 
   async function generateRandomPrivateKey() {
-    savePrivateKey(generatePrivateKey());
+    setKey(nip19.nsecEncode(generatePrivateKey()));
   }
 
   function changeRelayURL(i, ev) {
@@ -149,6 +157,16 @@ function Options() {
     setNewRelayURL('');
   }
 
+  function isKeyValid() {
+    if (key === '') return true;
+    if (key.match(/^[a-f0-9]{64}$/)) return true;
+    try {
+      if (nip19.decode(key).type === 'nsec') return true;
+    } catch (_) {}
+    console.log('bad');
+    return false;
+  }
+
   return (
     <>
       <header className="header">
@@ -165,12 +183,22 @@ function Options() {
           <div className="form-field">
             <label htmlFor="private-key">Private key:</label>
             <div className="input-group">
-              <input id="private-key" value={key} onChange={handleKeyChange} />
+              <input
+                id="private-key"
+                type={isKeyHidden ? 'password' : 'text'}
+                value={key}
+                onChange={handleKeyChange}
+                onFocus={() => setKeyHidden(false)}
+                onBlur={() => setKeyHidden(true)}
+              />
               <button onClick={generateRandomPrivateKey}>
                 <DiceIcon /> Generate
               </button>
             </div>
           </div>
+          <button disabled={!isKeyValid()} onClick={savePrivateKey}>
+            Save key
+          </button>
         </section>
 
         <section>

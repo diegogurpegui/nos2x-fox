@@ -115,6 +115,11 @@ button,
   &:hover {
     background-color: $color-primary-light;
   }
+
+  &:disabled {
+    background-color: $color-primary-disabled;
+    cursor: not-allowed;
+  }
 }
 .button-onlyicon {
   border: 0 none;

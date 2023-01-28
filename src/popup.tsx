@@ -23,26 +23,26 @@ function Popup() {
           const pubKey = getPublicKey(results.private_key);
           setKey(pubKey);
           setKeyNIP19(nip19.npubEncode(pubKey));
+
+          if (results.relays) {
+            let relaysList: string[] = [];
+            for (let url in results.relays) {
+              if (results.relays[url].write) {
+                relaysList.push(url);
+                if (relaysList.length >= 3) break;
+              }
+            }
+            // if (relaysList.length) {
+            //   let nprofileKey = nip19.nprofileEncode({
+            //     pubkey: pubKey,
+            //     relays: relaysList
+            //   })
+            //   keys.current.push(nprofileKey)
+            // }
+          }
         } else {
           setKey(null);
           setKeyNIP19(null);
-        }
-
-        if (results.relays) {
-          let relaysList: string[] = [];
-          for (let url in results.relays) {
-            if (results.relays[url].write) {
-              relaysList.push(url);
-              if (relaysList.length >= 3) break;
-            }
-          }
-          // if (relaysList.length) {
-          //   let nprofileKey = nip19.nprofileEncode({
-          //     pubkey: pubKey,
-          //     relays: relaysList
-          //   })
-          //   keys.current.push(nprofileKey)
-          // }
         }
       });
   }, []);
