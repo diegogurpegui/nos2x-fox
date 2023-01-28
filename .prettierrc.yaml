@@ -1,9 +1,9 @@
 arrowParens: avoid
-bracketSpacing: false
+bracketSpacing: true
 jsxBracketSameLine: false
 printWidth: 80
 proseWrap: preserve
-semi: false
+semi: true
 singleQuote: true
 trailingComma: none
 useTabs: false

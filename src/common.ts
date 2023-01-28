@@ -1,4 +1,6 @@
-import browser from 'webextension-polyfill'
+import browser from 'webextension-polyfill';
+
+import { PermissionConfig } from './types';
 
 export const PERMISSIONS_REQUIRED = {
   getPublicKey: 1,
@@ -6,7 +8,7 @@ export const PERMISSIONS_REQUIRED = {
   signEvent: 10,
   'nip04.encrypt': 20,
   'nip04.decrypt': 20
-}
+};
 
 const ORDERED_PERMISSIONS = [
   [1, ['getPublicKey']],
@@ -14,7 +16,7 @@ const ORDERED_PERMISSIONS = [
   [10, ['signEvent']],
   [20, ['nip04.encrypt']],
   [20, ['nip04.decrypt']]
-]
+];
 
 const PERMISSION_NAMES = {
   getPublicKey: 'read your public key',
@@ -22,55 +24,56 @@ const PERMISSION_NAMES = {
   signEvent: 'sign events using your private key',
   'nip04.encrypt': 'encrypt messages to peers',
   'nip04.decrypt': 'decrypt messages from peers'
-}
+};
 
-export function getAllowedCapabilities(permission) {
-  let requestedMethods = []
+export function getAllowedCapabilities(permission): string[] {
+  let requestedMethods: string[] = [];
   for (let i = 0; i < ORDERED_PERMISSIONS.length; i++) {
-    let [perm, methods] = ORDERED_PERMISSIONS[i]
-    if (perm > permission) break
-    requestedMethods = requestedMethods.concat(methods)
+    let [perm, methods] = ORDERED_PERMISSIONS[i];
+    if (perm > permission) break;
+    requestedMethods = requestedMethods.concat(methods as string[]);
   }
 
-  if (requestedMethods.length === 0) return 'nothing'
+  if (requestedMethods.length === 0) return ['nothing'];
 
-  return requestedMethods.map(method => PERMISSION_NAMES[method])
+  return requestedMethods.map(method => PERMISSION_NAMES[method]);
 }
 
 export function getPermissionsString(permission) {
-  let capabilities = getAllowedCapabilities(permission)
+  let capabilities = getAllowedCapabilities(permission);
 
-  if (capabilities.length === 0) return 'none'
-  if (capabilities.length === 1) return capabilities[0]
+  if (capabilities.length === 0) return 'none';
+  if (capabilities.length === 1) return capabilities[0];
 
   return (
-    capabilities.slice(0, -1).join(', ') +
+    (capabilities.slice(0, -1) as string[]).join(', ') +
     ' and ' +
     capabilities[capabilities.length - 1]
-  )
+  );
 }
 
-export async function readPermissions() {
-  let {permissions = {}} = await browser.storage.local.get('permissions')
+export async function readPermissions(): Promise<PermissionConfig> {
+  let { permissions = {} }: { permissions: PermissionConfig } =
+    await browser.storage.local.get('permissions');
 
   // delete expired
-  var needsUpdate = false
+  var needsUpdate = false;
   for (let host in permissions) {
     if (
       permissions[host].condition === 'expirable' &&
       permissions[host].created_at < Date.now() / 1000 - 5 * 60
     ) {
-      delete permissions[host]
-      needsUpdate = true
+      delete permissions[host];
+      needsUpdate = true;
     }
   }
-  if (needsUpdate) browser.storage.local.set({permissions})
+  if (needsUpdate) browser.storage.local.set({ permissions });
 
-  return permissions
+  return permissions;
 }
 
-export async function readPermissionLevel(host: string) {
-  return (await readPermissions())[host]?.level || 0
+export async function readPermissionLevel(host: string): Promise<number> {
+  return (await readPermissions())[host]?.level || 0;
 }
 
 export async function updatePermission(host: string, permission) {
@@ -82,13 +85,14 @@ export async function updatePermission(host: string, permission) {
         created_at: Math.round(Date.now() / 1000)
       }
     }
-  })
+  });
 }
 
 export async function removePermissions(host: string) {
-  let {permissions = {}} = await browser.storage.local.get('permissions')
-  delete permissions[host]
-  browser.storage.local.set({permissions})
+  let { permissions = {} }: { permissions: PermissionConfig } =
+    await browser.storage.local.get('permissions');
+  delete permissions[host];
+  browser.storage.local.set({ permissions });
 }
 
 export function truncatePublicKeys(
@@ -98,5 +102,5 @@ export function truncatePublicKeys(
 ): String {
   return `${publicKey.substring(0, startCount)}…${publicKey.substring(
     publicKey.length - endCount
-  )}`
+  )}`;
 }

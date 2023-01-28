@@ -1,32 +1,39 @@
-import browser from 'webextension-polyfill'
-import {render} from 'react-dom'
-import {getPublicKey, nip19} from 'nostr-tools'
-import React, {useState, useEffect} from 'react'
+import browser from 'webextension-polyfill';
+import { render } from 'react-dom';
+import { getPublicKey, nip19 } from 'nostr-tools';
+import React, { useState, useEffect } from 'react';
 
-import {truncatePublicKeys} from './common'
+import { RelaysConfig } from './types';
+import { truncatePublicKeys } from './common';
 
-import logotype from './assets/logo/logotype.png'
-import CopyIcon from './assets/icons/copy-outline.svg'
-import CogIcon from './assets/icons/cog-outline.svg'
+import logotype from './assets/logo/logotype.png';
+import CopyIcon from './assets/icons/copy-outline.svg';
+import CogIcon from './assets/icons/cog-outline.svg';
 
 function Popup() {
-  let [key, setKey] = useState('')
-  let [keyNIP19, setKeyNIP19] = useState('')
-  let [selectedKeyType, setSelectedKeyType] = useState('npub')
+  let [key, setKey] = useState('');
+  let [keyNIP19, setKeyNIP19] = useState('');
+  let [selectedKeyType, setSelectedKeyType] = useState('npub');
 
   useEffect(() => {
-    browser.storage.local.get(['private_key', 'relays']).then(results => {
-      if (results.private_key) {
-        const pubKey = getPublicKey(results.private_key)
-        setKey(pubKey)
-        setKeyNIP19(nip19.npubEncode(pubKey))
+    browser.storage.local
+      .get(['private_key', 'relays'])
+      .then((results: { private_key: string; relays: RelaysConfig }) => {
+        if (results.private_key) {
+          const pubKey = getPublicKey(results.private_key);
+          setKey(pubKey);
+          setKeyNIP19(nip19.npubEncode(pubKey));
+        } else {
+          setKey(null);
+          setKeyNIP19(null);
+        }
 
         if (results.relays) {
-          let relaysList = []
+          let relaysList: string[] = [];
           for (let url in results.relays) {
             if (results.relays[url].write) {
-              relaysList.push(url)
-              if (relaysList.length >= 3) break
+              relaysList.push(url);
+              if (relaysList.length >= 3) break;
             }
           }
           // if (relaysList.length) {
@@ -37,26 +44,22 @@ function Popup() {
           //   keys.current.push(nprofileKey)
           // }
         }
-      } else {
-        setKey(null)
-        setKeyNIP19(null)
-      }
-    })
-  }, [])
+      });
+  }, []);
 
   function handleKeyTypeSelect(event) {
-    setSelectedKeyType(event.target.value)
+    setSelectedKeyType(event.target.value);
   }
 
   function goToOptionsPage() {
     browser.tabs.create({
       url: browser.runtime.getURL('options.html'),
       active: true
-    })
+    });
   }
 
   function clipboardCopyPubKey() {
-    navigator.clipboard.writeText(selectedKeyType === 'hex' ? key : keyNIP19)
+    navigator.clipboard.writeText(selectedKeyType === 'hex' ? key : keyNIP19);
   }
 
   return (
@@ -99,7 +102,7 @@ function Popup() {
         </>
       )}
     </>
-  )
+  );
 }
 
-render(<Popup />, document.getElementById('main'))
+render(<Popup />, document.getElementById('main'));

@@ -12,4 +12,22 @@ export const KindNames = {
   '42': 'Channel Message',
   '43': 'Channel Hide Message',
   '44': 'Channel Mute User'
-}
+};
+
+export type RelaysConfig = {
+  [url: string]: { read: boolean; write: boolean };
+};
+
+export type PermissionConfig = {
+  [host: string]: {
+    condition: string;
+    created_at: number;
+    level: number;
+  };
+};
+
+export type PromptParams = {
+  event: {
+    kind: number;
+  };
+};

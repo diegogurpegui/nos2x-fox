@@ -1,98 +1,104 @@
-import browser from 'webextension-polyfill'
-import React, {useState, useCallback, useEffect} from 'react'
-import {render} from 'react-dom'
-import {useDebouncedCallback} from 'use-debounce'
-import {generatePrivateKey} from 'nostr-tools'
+import browser from 'webextension-polyfill';
+import React, { useState, useCallback, useEffect } from 'react';
+import { render } from 'react-dom';
+import { useDebouncedCallback } from 'use-debounce';
+import { generatePrivateKey } from 'nostr-tools';
 
-import {Alert} from './alert'
+import { PermissionConfig } from './types';
+import { Alert } from './alert';
 
 import {
   getPermissionsString,
   readPermissions,
   removePermissions
-} from './common'
-import logotype from './assets/logo/logotype.png'
-import DiceIcon from './assets/icons/dice-outline.svg'
-import RadioIcon from './assets/icons/radio-outline.svg'
+} from './common';
+import logotype from './assets/logo/logotype.png';
+import DiceIcon from './assets/icons/dice-outline.svg';
+import RadioIcon from './assets/icons/radio-outline.svg';
 
-import manifest from './manifest.json'
+import manifest from './manifest.json';
+
+type RelayConfig = {
+  url: string;
+  policy: { read: boolean; write: boolean };
+};
 
 function Options() {
-  let [key, setKey] = useState('')
-  let [relays, setRelays] = useState([])
-  let [newRelayURL, setNewRelayURL] = useState('')
-  let [permissions, setPermissions] = useState()
-  let [message, setMessage] = useState('')
-  let [messageType, setMessageType] = useState('info')
+  let [key, setKey] = useState('');
+  let [relays, setRelays] = useState([]);
+  let [newRelayURL, setNewRelayURL] = useState('');
+  let [permissions, setPermissions] = useState();
+  let [message, setMessage] = useState('');
+  let [messageType, setMessageType] = useState('info');
 
   useEffect(() => {
-    saveRelays()
-  }, [relays])
+    saveRelays();
+  }, [relays]);
 
   useEffect(() => {
     browser.storage.local.get(['private_key', 'relays']).then(results => {
-      if (results.private_key) setKey(results.private_key)
+      if (results.private_key) setKey(results.private_key);
       if (results.relays) {
-        let relaysList = []
+        let relaysList: RelayConfig[] = [];
         for (let url in results.relays) {
           relaysList.push({
             url,
             policy: results.relays[url]
-          })
+          });
         }
-        setRelays(relaysList)
+        setRelays(relaysList);
       }
-    })
-  }, [])
+    });
+  }, []);
 
   useEffect(() => {
-    loadPermissions()
-  }, [])
+    loadPermissions();
+  }, []);
 
   const showMessage = useCallback((msg, type = 'info', timeout = 3000) => {
-    setMessageType(type)
-    setMessage(msg)
+    setMessageType(type);
+    setMessage(msg);
     if (timeout > 0) {
-      setTimeout(setMessage, 3000)
+      setTimeout(setMessage, 3000);
     }
-  })
+  });
 
   const saveRelays = useDebouncedCallback(async () => {
     await browser.storage.local.set({
       relays: Object.fromEntries(
         relays
-          .filter(({url}) => url.trim() !== '')
-          .map(({url, policy}) => [url.trim(), policy])
+          .filter(({ url }) => url.trim() !== '')
+          .map(({ url, policy }) => [url.trim(), policy])
       )
-    })
-    showMessage('saved relays!')
-  }, 700)
+    });
+    showMessage('saved relays!');
+  }, 700);
 
   async function savePrivateKey(key) {
-    setKey(key)
+    setKey(key);
 
     if (key.match(/^[a-f0-9]{64}$/) || key === '') {
       await browser.storage.local.set({
         private_key: key
-      })
-      showMessage('Key saved!', 'success')
+      });
+      showMessage('Key saved!', 'success');
     } else {
-      showMessage('The key is not valid.', 'warning', 0)
+      showMessage('The key is not valid.', 'warning', 0);
     }
   }
 
   async function handleKeyChange(e) {
-    let key = e.target.value.toLowerCase().trim()
-    savePrivateKey(key)
+    let key = e.target.value.toLowerCase().trim();
+    savePrivateKey(key);
   }
 
   async function handleRevoke(e) {
-    e.preventDefault()
-    let host = e.target.dataset.domain
+    e.preventDefault();
+    let host = e.target.dataset.domain;
     if (window.confirm(`Revoke all permissions from ${host}?`)) {
-      await removePermissions(host)
-      showMessage(`Removed permissions from ${host}`)
-      loadPermissions()
+      await removePermissions(host);
+      showMessage(`Removed permissions from ${host}`);
+      loadPermissions();
     }
   }
 
@@ -100,27 +106,27 @@ function Options() {
     readPermissions().then(permissions => {
       setPermissions(
         Object.entries(permissions).map(
-          ([host, {level, condition, created_at}]) => ({
+          ([host, { level, condition, created_at }]) => ({
             host,
             level,
             condition,
             created_at
           })
         )
-      )
-    })
+      );
+    });
   }
 
   async function generateRandomPrivateKey() {
-    savePrivateKey(generatePrivateKey())
+    savePrivateKey(generatePrivateKey());
   }
 
   function changeRelayURL(i, ev) {
     setRelays([
       ...relays.slice(0, i),
-      {url: ev.target.value, policy: relays[i].policy},
+      { url: ev.target.value, policy: relays[i].policy },
       ...relays.slice(i + 1)
-    ])
+    ]);
   }
 
   function toggleRelayPolicy(i, cat) {
@@ -128,19 +134,19 @@ function Options() {
       ...relays.slice(0, i),
       {
         url: relays[i].url,
-        policy: {...relays[i].policy, [cat]: !relays[i].policy[cat]}
+        policy: { ...relays[i].policy, [cat]: !relays[i].policy[cat] }
       },
       ...relays.slice(i + 1)
-    ])
+    ]);
   }
 
   function addNewRelay() {
     relays.push({
       url: newRelayURL,
-      policy: {read: true, write: true}
-    })
-    setRelays(relays)
-    setNewRelayURL('')
+      policy: { read: true, write: true }
+    });
+    setRelays(relays);
+    setNewRelayURL('');
   }
 
   return (
@@ -182,7 +188,7 @@ function Options() {
                   </tr>
                 </thead>
                 <tbody>
-                  {permissions.map(({host, level, condition, created_at}) => (
+                  {permissions.map(({ host, level, condition, created_at }) => (
                     <tr key={host}>
                       <td>{host}</td>
                       <td>{getPermissionsString(level)}</td>
@@ -212,7 +218,7 @@ function Options() {
         <section>
           <h3>Preferred relays</h3>
           <div className="relays-list">
-            {relays.map(({url, policy}, i) => (
+            {relays.map(({ url, policy }, i) => (
               <div key={i} className="relays-list-item">
                 <RadioIcon />
                 <input value={url} onChange={changeRelayURL.bind(null, i)} />
@@ -248,7 +254,7 @@ function Options() {
       </main>
       <footer>version {manifest.version}</footer>
     </>
-  )
+  );
 }
 
-render(<Options />, document.getElementById('main'))
+render(<Options />, document.getElementById('main'));
