@@ -1,12 +1,14 @@
 {
   "name": "nos2x-fox",
   "description": "Nostr Signer Extension (for Firefox)",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "scripts": {
     "build": "./build.js prod",
+    "build-hosted": "./build.js prod-hosted",
     "watch": "ag -l --js | entr ./build.js",
     "sources": "rm -f extension/*.build.*; zip -r sources . -i extension build.js README.md",
-    "package": "./build.js prod; cd dist; zip -r archive *; cd ..; mv dist/archive.zip ./nos2x-fox.zip"
+    "package": "build; cd dist; zip -r archive *; cd ..; mv dist/archive.zip ./nos2x-fox.zip",
+    "package-hosted": "build-hosted; cd dist; zip -r archive *; cd ..; mv dist/archive.zip ./nos2x-fox_hosted.zip"
   },
   "dependencies": {
     "events": "^3.3.0",
@@ -19,6 +21,7 @@
   },
   "devDependencies": {
     "esbuild": "^0.16.15",
+    "esbuild-plugin-clean": "^1.0.1",
     "esbuild-plugin-copy": "^2.0.1",
     "esbuild-plugin-svgr": "^1.0.1",
     "esbuild-sass-plugin": "^2.4.5",

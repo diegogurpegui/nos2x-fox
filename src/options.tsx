@@ -15,7 +15,7 @@ import logotype from './assets/logo/logotype.png';
 import DiceIcon from './assets/icons/dice-outline.svg';
 import RadioIcon from './assets/icons/radio-outline.svg';
 
-import manifest from './manifest.json';
+// import manifest from './manifest.json';
 
 type RelayConfig = {
   url: string;
@@ -30,6 +30,7 @@ function Options() {
   let [permissions, setPermissions] = useState();
   let [message, setMessage] = useState('');
   let [messageType, setMessageType] = useState('info');
+  let [version, setVersion] = useState('0.0.0');
 
   useEffect(() => {
     saveRelays();
@@ -53,6 +54,10 @@ function Options() {
 
   useEffect(() => {
     loadPermissions();
+
+    fetch('./manifest.json')
+      .then(response => response.json())
+      .then(json => setVersion(json.version));
   }, []);
 
   const showMessage = useCallback((msg, type = 'info', timeout = 3000) => {
@@ -280,7 +285,7 @@ function Options() {
           </div>
         </section>
       </main>
-      <footer>version {manifest.version}</footer>
+      <footer>version {version}</footer>
     </>
   );
 }
