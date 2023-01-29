@@ -33,10 +33,6 @@ function Options() {
   let [version, setVersion] = useState('0.0.0');
 
   useEffect(() => {
-    saveRelays();
-  }, [relays]);
-
-  useEffect(() => {
     browser.storage.local.get(['private_key', 'relays']).then(results => {
       if (results.private_key) setKey(nip19.nsecEncode(results.private_key));
       if (results.relays) {
@@ -60,6 +56,12 @@ function Options() {
       .then(json => setVersion(json.version));
   }, []);
 
+  useEffect(() => {
+    saveRelaysInStorage()
+      ?.then(() => console.log('Relays stored.'))
+      .catch(err => console.error('Error storing relays', err));
+  }, [relays]);
+
   const showMessage = useCallback((msg, type = 'info', timeout = 3000) => {
     setMessageType(type);
     setMessage(msg);
@@ -68,16 +70,7 @@ function Options() {
     }
   });
 
-  const saveRelays = useDebouncedCallback(async () => {
-    await browser.storage.local.set({
-      relays: Object.fromEntries(
-        relays
-          .filter(({ url }) => url.trim() !== '')
-          .map(({ url, policy }) => [url.trim(), policy])
-      )
-    });
-    showMessage('saved relays!');
-  }, 700);
+  //#region Private key
 
   async function savePrivateKey() {
     if (!isKeyValid()) return;
@@ -100,10 +93,28 @@ function Options() {
     showMessage('Saved private key!', 'success');
   }
 
+  function isKeyValid() {
+    if (key === '') return true;
+    if (key.match(/^[a-f0-9]{64}$/)) return true;
+    try {
+      if (nip19.decode(key).type === 'nsec') return true;
+    } catch (_) {}
+    console.log('bad');
+    return false;
+  }
+
   async function handleKeyChange(e) {
     let key = e.target.value.toLowerCase().trim();
     setKey(key);
   }
+
+  async function generateRandomPrivateKey() {
+    setKey(nip19.nsecEncode(generatePrivateKey()));
+  }
+
+  //#endregion Private key
+
+  //#region Permissions
 
   async function handleRevoke(e) {
     e.preventDefault();
@@ -130,11 +141,22 @@ function Options() {
     });
   }
 
-  async function generateRandomPrivateKey() {
-    setKey(nip19.nsecEncode(generatePrivateKey()));
-  }
+  //#endregion Permissions
 
-  function changeRelayURL(i, ev) {
+  //#region Relays
+
+  const saveRelaysInStorage = useDebouncedCallback(async () => {
+    await browser.storage.local.set({
+      relays: Object.fromEntries(
+        relays
+          .filter(({ url }) => url.trim() !== '')
+          .map(({ url, policy }) => [url.trim(), policy])
+      )
+    });
+    showMessage('Saved relays!', 'success');
+  }, 700);
+
+  function handleChangeRelayURL(i, ev) {
     setRelays([
       ...relays.slice(0, i),
       { url: ev.target.value, policy: relays[i].policy },
@@ -142,7 +164,7 @@ function Options() {
     ]);
   }
 
-  function toggleRelayPolicy(i, cat) {
+  function handleToggleRelayPolicy(i, cat) {
     setRelays([
       ...relays.slice(0, i),
       {
@@ -153,24 +175,34 @@ function Options() {
     ]);
   }
 
-  function addNewRelay() {
-    relays.push({
-      url: newRelayURL,
-      policy: { read: true, write: true }
-    });
-    setRelays(relays);
+  function handleNewRelayURLChange(e) {
+    setNewRelayURL(e.target.value);
+  }
+
+  function handleAddRelayClick() {
+    if (!isRelayURLValid()) return;
+
+    setRelays([
+      ...relays,
+      {
+        url: newRelayURL,
+        policy: { read: true, write: true }
+      }
+    ]);
     setNewRelayURL('');
   }
 
-  function isKeyValid() {
-    if (key === '') return true;
-    if (key.match(/^[a-f0-9]{64}$/)) return true;
-    try {
-      if (nip19.decode(key).type === 'nsec') return true;
-    } catch (_) {}
-    console.log('bad');
-    return false;
+  /**
+   * Check if the URL is valid. If no URL is provided is taken from the state
+   * @param url Url to check.
+   * @returns
+   */
+  function isRelayURLValid(url?: string) {
+    const urlToCheck = url ? url : newRelayURL;
+    return urlToCheck != null && urlToCheck.trim() != '';
   }
+
+  //#endregion Relays
 
   return (
     <>
@@ -254,13 +286,16 @@ function Options() {
             {relays.map(({ url, policy }, i) => (
               <div key={i} className="relays-list-item">
                 <RadioIcon />
-                <input value={url} onChange={changeRelayURL.bind(null, i)} />
+                <input
+                  value={url}
+                  onChange={handleChangeRelayURL.bind(null, i)}
+                />
                 <label>
                   read
                   <input
                     type="checkbox"
                     checked={policy.read}
-                    onChange={toggleRelayPolicy.bind(null, i, 'read')}
+                    onChange={handleToggleRelayPolicy.bind(null, i, 'read')}
                   />
                 </label>
                 <label>
@@ -268,7 +303,7 @@ function Options() {
                   <input
                     type="checkbox"
                     checked={policy.write}
-                    onChange={toggleRelayPolicy.bind(null, i, 'write')}
+                    onChange={handleToggleRelayPolicy.bind(null, i, 'write')}
                   />
                 </label>
               </div>
@@ -279,9 +314,11 @@ function Options() {
             <input
               id="new-relay-url"
               value={newRelayURL}
-              onChange={e => setNewRelayURL(e.target.value)}
-              onBlur={addNewRelay}
+              onChange={handleNewRelayURLChange}
             />
+            <button disabled={!isRelayURLValid()} onClick={handleAddRelayClick}>
+              Add relay
+            </button>
           </div>
         </section>
       </main>
