@@ -8,6 +8,10 @@ $color-info: #aebef5;
 $color-info-dark: #7381ad;
 $color-warning: #f08046;
 $color-warning-dark: #5f321b;
+$color-warning-light: #eebca3;
+$color-danger: #b8480e;
+$color-danger-dark: #501f06;
+$color-danger-light: #bb6b42;
 $color-success: #46f07f;
 $color-success-dark: #1c5e32;
 $background-color: #ffffff;
@@ -112,8 +116,24 @@ button,
     }
   }
 
+  &.button-warning {
+    background-color: $color-warning;
+    border-color: $color-warning;
+  }
+  &.button-danger {
+    background-color: $color-danger;
+    border-color: $color-danger;
+  }
+
   &:hover {
     background-color: $color-primary-light;
+
+    &.button-warning {
+      background-color: $color-warning-light;
+    }
+    &.button-danger {
+      background-color: $color-danger-light;
+    }
   }
 
   &:disabled {

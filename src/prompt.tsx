@@ -59,7 +59,7 @@ function Prompt() {
           <CheckmarkCircleIcon />
           Authorize just this
         </button>
-        <button className="button" onClick={authorizeHandler('no')}>
+        <button className="button button-danger" onClick={authorizeHandler('no')}>
           <CloseCircleIcon /> Reject
         </button>
       </div>
