@@ -3,33 +3,33 @@ window.nostr = {
   _pubkey: null,
 
   async getPublicKey() {
-    if (this._pubkey) return this._pubkey
-    this._pubkey = await this._call('getPublicKey', {})
-    return this._pubkey
+    if (this._pubkey) return this._pubkey;
+    this._pubkey = await this._call('getPublicKey', {});
+    return this._pubkey;
   },
 
   async signEvent(event) {
-    return this._call('signEvent', {event})
+    return this._call('signEvent', { event });
   },
 
   async getRelays() {
-    return this._call('getRelays', {})
+    return this._call('getRelays', {});
   },
 
   nip04: {
     async encrypt(peer, plaintext) {
-      return window.nostr._call('nip04.encrypt', {peer, plaintext})
+      return window.nostr._call('nip04.encrypt', { peer, plaintext });
     },
 
     async decrypt(peer, ciphertext) {
-      return window.nostr._call('nip04.decrypt', {peer, ciphertext})
+      return window.nostr._call('nip04.decrypt', { peer, ciphertext });
     }
   },
 
   _call(type, params) {
     return new Promise((resolve, reject) => {
-      let id = Math.random().toString().slice(4)
-      this._requests[id] = {resolve, reject}
+      let id = Math.random().toString().slice(4);
+      this._requests[id] = { resolve, reject };
       window.postMessage(
         {
           id,
@@ -38,10 +38,10 @@ window.nostr = {
           params
         },
         '*'
-      )
-    })
+      );
+    });
   }
-}
+};
 
 window.addEventListener('message', message => {
   if (
@@ -50,15 +50,15 @@ window.addEventListener('message', message => {
     message.data.ext !== 'nos2x' ||
     !window.nostr._requests[message.data.id]
   )
-    return
+    return;
 
   if (message.data.response.error) {
-    let error = new Error('nos2x: ' + message.data.response.error.message)
-    error.stack = message.data.response.error.stack
-    window.nostr._requests[message.data.id].reject(error)
+    let error = new Error('nos2x: ' + message.data.response.error.message);
+    error.stack = message.data.response.error.stack;
+    window.nostr._requests[message.data.id].reject(error);
   } else {
-    window.nostr._requests[message.data.id].resolve(message.data.response)
+    window.nostr._requests[message.data.id].resolve(message.data.response);
   }
 
-  delete window.nostr._requests[message.data.id]
-})
+  delete window.nostr._requests[message.data.id];
+});

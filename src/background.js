@@ -1,121 +1,126 @@
-import browser from 'webextension-polyfill'
-import {validateEvent, signEvent, getEventHash, getPublicKey} from 'nostr-tools'
-import {encrypt, decrypt} from 'nostr-tools/nip04'
+import browser from 'webextension-polyfill';
+import {
+  validateEvent,
+  signEvent,
+  getEventHash,
+  getPublicKey
+} from 'nostr-tools';
+import { encrypt, decrypt } from 'nostr-tools/nip04';
 
 import {
   PERMISSIONS_REQUIRED,
   readPermissionLevel,
   updatePermission
-} from './common'
+} from './common';
 
-const prompts = {}
+const prompts = {};
 
 browser.runtime.onMessage.addListener(async (req, sender) => {
-  let {prompt} = req
+  let { prompt } = req;
 
   if (prompt) {
-    return handlePromptMessage(req, sender)
+    return handlePromptMessage(req, sender);
   } else {
-    return handleContentScriptMessage(req)
+    return handleContentScriptMessage(req);
   }
-})
+});
 
 browser.runtime.onMessageExternal.addListener(
-  async ({type, params}, sender) => {
-    let extensionId = new URL(sender.url).host
-    handleContentScriptMessage({type, params, host: extensionId})
+  async ({ type, params }, sender) => {
+    let extensionId = new URL(sender.url).host;
+    handleContentScriptMessage({ type, params, host: extensionId });
   }
-)
+);
 
-async function handleContentScriptMessage({type, params, host}) {
-  let level = await readPermissionLevel(host)
+async function handleContentScriptMessage({ type, params, host }) {
+  let level = await readPermissionLevel(host);
 
   if (level >= PERMISSIONS_REQUIRED[type]) {
     // authorized, proceed
   } else {
     // ask for authorization
     try {
-      await promptPermission(host, PERMISSIONS_REQUIRED[type], params)
+      await promptPermission(host, PERMISSIONS_REQUIRED[type], params);
       // authorized, proceed
     } catch (_) {
       // not authorized, stop here
       return {
         error: `insufficient permissions, required ${PERMISSIONS_REQUIRED[type]}`
-      }
+      };
     }
   }
 
-  let results = await browser.storage.local.get('private_key')
+  let results = await browser.storage.local.get('private_key');
   if (!results || !results.private_key) {
-    return {error: 'no private key found'}
+    return { error: 'no private key found' };
   }
 
-  let sk = results.private_key
+  let sk = results.private_key;
 
   try {
     switch (type) {
       case 'getPublicKey': {
-        return getPublicKey(sk)
+        return getPublicKey(sk);
       }
       case 'getRelays': {
-        let results = await browser.storage.local.get('relays')
-        return results.relays || {}
+        let results = await browser.storage.local.get('relays');
+        return results.relays || {};
       }
       case 'signEvent': {
-        let {event} = params
+        let { event } = params;
 
-        if (!event.pubkey) event.pubkey = getPublicKey(sk)
-        if (!event.id) event.id = getEventHash(event)
+        if (!event.pubkey) event.pubkey = getPublicKey(sk);
+        if (!event.id) event.id = getEventHash(event);
 
-        if (!validateEvent(event)) return {error: 'invalid event'}
+        if (!validateEvent(event)) return { error: 'invalid event' };
 
-        event.sig = await signEvent(event, sk)
-        return event
+        event.sig = await signEvent(event, sk);
+        return event;
       }
       case 'nip04.encrypt': {
-        let {peer, plaintext} = params
-        return encrypt(sk, peer, plaintext)
+        let { peer, plaintext } = params;
+        return encrypt(sk, peer, plaintext);
       }
       case 'nip04.decrypt': {
-        let {peer, ciphertext} = params
-        return decrypt(sk, peer, ciphertext)
+        let { peer, ciphertext } = params;
+        return decrypt(sk, peer, ciphertext);
       }
     }
   } catch (error) {
-    return {error: {message: error.message, stack: error.stack}}
+    return { error: { message: error.message, stack: error.stack } };
   }
 }
 
-function handlePromptMessage({id, condition, host, level}, sender) {
+function handlePromptMessage({ id, condition, host, level }, sender) {
   switch (condition) {
     case 'forever':
     case 'expirable':
-      prompts[id]?.resolve?.()
+      prompts[id]?.resolve?.();
       updatePermission(host, {
         level,
         condition
-      })
-      break
+      });
+      break;
     case 'single':
-      prompts[id]?.resolve?.()
-      break
+      prompts[id]?.resolve?.();
+      break;
     case 'no':
-      prompts[id]?.reject?.()
-      break
+      prompts[id]?.reject?.();
+      break;
   }
 
-  delete prompts[id]
-  browser.windows.remove(sender.tab.windowId)
+  delete prompts[id];
+  browser.windows.remove(sender.tab.windowId);
 }
 
 function promptPermission(host, level, params) {
-  let id = Math.random().toString().slice(4)
+  let id = Math.random().toString().slice(4);
   let qs = new URLSearchParams({
     host,
     level,
     id,
     params: JSON.stringify(params)
-  })
+  });
 
   return new Promise((resolve, reject) => {
     browser.windows.create({
@@ -123,8 +128,8 @@ function promptPermission(host, level, params) {
       type: 'popup',
       width: 450,
       height: 400
-    })
+    });
 
-    prompts[id] = {resolve, reject}
-  })
+    prompts[id] = { resolve, reject };
+  });
 }
