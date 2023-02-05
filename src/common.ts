@@ -1,6 +1,4 @@
-import browser from 'webextension-polyfill';
-
-import { PermissionConfig } from './types';
+import { readPermissions } from './storage';
 
 export const PERMISSIONS_REQUIRED = {
   getPublicKey: 1,
@@ -52,47 +50,8 @@ export function getPermissionsString(permission) {
   );
 }
 
-export async function readPermissions(): Promise<PermissionConfig> {
-  let { permissions = {} }: { permissions: PermissionConfig } =
-    await browser.storage.local.get('permissions');
-
-  // delete expired
-  var needsUpdate = false;
-  for (let host in permissions) {
-    if (
-      permissions[host].condition === 'expirable' &&
-      permissions[host].created_at < Date.now() / 1000 - 5 * 60
-    ) {
-      delete permissions[host];
-      needsUpdate = true;
-    }
-  }
-  if (needsUpdate) browser.storage.local.set({ permissions });
-
-  return permissions;
-}
-
 export async function readPermissionLevel(host: string): Promise<number> {
   return (await readPermissions())[host]?.level || 0;
-}
-
-export async function updatePermission(host: string, permission) {
-  browser.storage.local.set({
-    permissions: {
-      ...((await browser.storage.local.get('permissions').permissions) || {}),
-      [host]: {
-        ...permission,
-        created_at: Math.round(Date.now() / 1000)
-      }
-    }
-  });
-}
-
-export async function removePermissions(host: string) {
-  let { permissions = {} }: { permissions: PermissionConfig } =
-    await browser.storage.local.get('permissions');
-  delete permissions[host];
-  browser.storage.local.set({ permissions });
 }
 
 export function truncatePublicKeys(

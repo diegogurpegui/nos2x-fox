@@ -1,4 +1,3 @@
-import browser from 'webextension-polyfill';
 import React, { useState, useCallback, useEffect } from 'react';
 import { render } from 'react-dom';
 import { useDebouncedCallback } from 'use-debounce';
@@ -6,11 +5,8 @@ import { generatePrivateKey, nip19 } from 'nostr-tools';
 
 import { Alert } from './alert';
 
-import {
-  getPermissionsString,
-  readPermissions,
-  removePermissions
-} from './common';
+import * as Storage from './storage';
+import { getPermissionsString } from './common';
 import logotype from './assets/logo/logotype.png';
 import DiceIcon from './assets/icons/dice-outline.svg';
 import RadioIcon from './assets/icons/radio-outline.svg';
@@ -33,14 +29,17 @@ function Options() {
   let [version, setVersion] = useState('0.0.0');
 
   useEffect(() => {
-    browser.storage.local.get(['private_key', 'relays']).then(results => {
-      if (results.private_key) setKey(nip19.nsecEncode(results.private_key));
-      if (results.relays) {
+    Storage.readPrivateKey().then(privateKey => {
+      if (privateKey) setKey(nip19.nsecEncode(privateKey));
+    });
+
+    Storage.readRelays().then(relays => {
+      if (relays) {
         let relaysList: RelayConfig[] = [];
-        for (let url in results.relays) {
+        for (let url in relays) {
           relaysList.push({
             url,
-            policy: results.relays[url]
+            policy: relays[url]
           });
         }
         setRelays(relaysList);
@@ -82,9 +81,7 @@ function Options() {
       if (type === 'nsec') hexOrEmptyKey = data;
     } catch (_) {}
 
-    await browser.storage.local.set({
-      private_key: hexOrEmptyKey
-    });
+    await Storage.updatePrivateKey(hexOrEmptyKey);
 
     if (hexOrEmptyKey !== '') {
       setKey(nip19.nsecEncode(hexOrEmptyKey));
@@ -120,14 +117,14 @@ function Options() {
     e.preventDefault();
     let host = e.target.dataset.domain;
     if (window.confirm(`Revoke all permissions from ${host}?`)) {
-      await removePermissions(host);
+      await Storage.removePermissions(host);
       showMessage(`Removed permissions from ${host}`);
       loadPermissions();
     }
   }
 
   function loadPermissions() {
-    readPermissions().then(permissions => {
+    Storage.readPermissions().then(permissions => {
       setPermissions(
         Object.entries(permissions).map(
           ([host, { level, condition, created_at }]) => ({
@@ -146,13 +143,14 @@ function Options() {
   //#region Relays
 
   const saveRelaysInStorage = useDebouncedCallback(async () => {
-    await browser.storage.local.set({
-      relays: Object.fromEntries(
+    await Storage.updateRelays(
+      Object.fromEntries(
         relays
           .filter(({ url }) => url.trim() !== '')
           .map(({ url, policy }) => [url.trim(), policy])
       )
-    });
+    );
+
     showMessage('Saved relays!', 'success');
   }, 700);
 

@@ -20,6 +20,7 @@ esbuild
       'content-script': './src/content-script.js',
       'nostr-provider': './src/nostr-provider.js',
       types: './src/types.ts',
+      storage: './src/storage.ts',
       common: './src/common.ts',
       popup: './src/popup.jsx',
       prompt: './src/prompt.jsx',

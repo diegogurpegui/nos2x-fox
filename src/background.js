@@ -7,11 +7,8 @@ import {
 } from 'nostr-tools';
 import { encrypt, decrypt } from 'nostr-tools/nip04';
 
-import {
-  PERMISSIONS_REQUIRED,
-  readPermissionLevel,
-  updatePermission
-} from './common';
+import * as Storage from './storage';
+import { PERMISSIONS_REQUIRED, readPermissionLevel } from './common';
 
 const prompts = {};
 
@@ -50,7 +47,7 @@ async function handleContentScriptMessage({ type, params, host }) {
     }
   }
 
-  let results = await browser.storage.local.get('private_key');
+  let results = await Storage.readPrivateKey();
   if (!results || !results.private_key) {
     return { error: 'no private key found' };
   }
@@ -63,7 +60,7 @@ async function handleContentScriptMessage({ type, params, host }) {
         return getPublicKey(sk);
       }
       case 'getRelays': {
-        let results = await browser.storage.local.get('relays');
+        let results = await Storage.readRelays();
         return results.relays || {};
       }
       case 'signEvent': {
@@ -96,7 +93,7 @@ function handlePromptMessage({ id, condition, host, level }, sender) {
     case 'forever':
     case 'expirable':
       prompts[id]?.resolve?.();
-      updatePermission(host, {
+      Storage.updatePermission(host, {
         level,
         condition
       });

@@ -4,6 +4,7 @@ import { getPublicKey, nip19 } from 'nostr-tools';
 import React, { useState, useEffect } from 'react';
 
 import { RelaysConfig } from './types';
+import * as Storage from './storage';
 import { truncatePublicKeys } from './common';
 
 import logotype from './assets/logo/logotype.png';
@@ -16,18 +17,17 @@ function Popup() {
   let [selectedKeyType, setSelectedKeyType] = useState('npub');
 
   useEffect(() => {
-    browser.storage.local
-      .get(['private_key', 'relays'])
-      .then((results: { private_key: string; relays: RelaysConfig }) => {
-        if (results.private_key) {
-          const pubKey = getPublicKey(results.private_key);
-          setKey(pubKey);
-          setKeyNIP19(nip19.npubEncode(pubKey));
+    Storage.readPrivateKey().then(privateKey => {
+      if (privateKey) {
+        const pubKey = getPublicKey(privateKey);
+        setKey(pubKey);
+        setKeyNIP19(nip19.npubEncode(pubKey));
 
-          if (results.relays) {
+        Storage.readRelays().then(relays => {
+          if (relays) {
             let relaysList: string[] = [];
-            for (let url in results.relays) {
-              if (results.relays[url].write) {
+            for (let url in relays) {
+              if (relays[url].write) {
                 relaysList.push(url);
                 if (relaysList.length >= 3) break;
               }
@@ -40,11 +40,12 @@ function Popup() {
             //   keys.current.push(nprofileKey)
             // }
           }
-        } else {
-          setKey(null);
-          setKeyNIP19(null);
-        }
-      });
+        });
+      } else {
+        setKey(null);
+        setKeyNIP19(null);
+      }
+    });
   }, []);
 
   function handleKeyTypeSelect(event) {

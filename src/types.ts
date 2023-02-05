@@ -14,6 +14,12 @@ export const KindNames = {
   '44': 'Channel Mute User'
 };
 
+export enum ConfigurationKeys {
+  PRIVATE_KEY = 'private_key',
+  RELAYS = 'relays',
+  PERMISSIONS = 'permissions'
+}
+
 export type RelaysConfig = {
   [url: string]: { read: boolean; write: boolean };
 };
