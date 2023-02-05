@@ -123,7 +123,7 @@ function promptPermission(host, level, params) {
     browser.windows.create({
       url: `${browser.runtime.getURL('prompt.html')}?${qs.toString()}`,
       type: 'popup',
-      width: 450,
+      width: 600,
       height: 400
     });
 
