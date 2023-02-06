@@ -7,8 +7,8 @@
     "build-hosted": "./build.js prod-hosted",
     "watch": "ag -l --js | entr ./build.js",
     "sources": "rm -f extension/*.build.*; zip -r sources . -i extension build.js README.md",
-    "package": "build; cd dist; zip -r archive *; cd ..; mv dist/archive.zip ./nos2x-fox.zip",
-    "package-hosted": "build-hosted; cd dist; zip -r archive *; cd ..; mv dist/archive.zip ./nos2x-fox_hosted.zip"
+    "package": "yarn run build; cd dist; zip -r archive *; cd ..; mv dist/archive.zip ./nos2x-fox.zip",
+    "package-hosted": "yarn run build-hosted; cd dist; zip -r archive *; cd ..; mv dist/archive.zip ./nos2x-fox_hosted.zip"
   },
   "dependencies": {
     "events": "^3.3.0",
