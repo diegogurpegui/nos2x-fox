@@ -12,7 +12,7 @@ window.addEventListener('message', async message => {
   if (message.source !== window) return;
   if (!message.data) return;
   if (!message.data.params) return;
-  if (message.data.ext !== 'nos2x') return;
+  if (message.data.ext !== 'nos2x-fox') return;
 
   // pass on to background
   var response;
@@ -28,7 +28,7 @@ window.addEventListener('message', async message => {
 
   // return response
   window.postMessage(
-    { id: message.data.id, ext: 'nos2x', response },
+    { id: message.data.id, ext: 'nos2x-fox', response },
     message.origin
   );
 });

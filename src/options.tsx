@@ -206,7 +206,7 @@ function Options() {
     <>
       <header className="header">
         <h1>
-          <img src={logotype} alt="nos2x" />
+          <img src={logotype} alt="nos2x-fox" />
         </h1>
         <p>nostr signer extension</p>
       </header>

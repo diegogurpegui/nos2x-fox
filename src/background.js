@@ -47,12 +47,12 @@ async function handleContentScriptMessage({ type, params, host }) {
     }
   }
 
-  let results = await Storage.readPrivateKey();
-  if (!results || !results.private_key) {
+  let privateKey = await Storage.readPrivateKey();
+  if (!privateKey) {
     return { error: 'no private key found' };
   }
 
-  let sk = results.private_key;
+  let sk = privateKey;
 
   try {
     switch (type) {
@@ -60,8 +60,8 @@ async function handleContentScriptMessage({ type, params, host }) {
         return getPublicKey(sk);
       }
       case 'getRelays': {
-        let results = await Storage.readRelays();
-        return results.relays || {};
+        let relays = await Storage.readRelays();
+        return relays || {};
       }
       case 'signEvent': {
         let { event } = params;
