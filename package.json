@@ -1,7 +1,7 @@
 {
   "name": "nos2x-fox",
   "description": "Nostr Signer Extension (for Firefox)",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "scripts": {
     "build": "./build.js prod",
     "build-hosted": "./build.js prod-hosted",
