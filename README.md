@@ -46,7 +46,6 @@ After you build the extension, follow these steps:
 
 ![](screenshots/screenshot_popup.png)
 ![](screenshots/screenshot_options.png)
-![](screenshots/screenshot_popup-with-key.png)
 ![](screenshots/screenshot_prompt.png)
 
 ---
