@@ -22,7 +22,7 @@ function Prompt() {
     params = JSON.parse(queryString.get('params') as string) as PromptParams;
     if (params) {
       kind = params.event.kind;
-      kindName = KindNames[kind];
+      kindName = getKindDescription(kind);
     } else {
       console.error('Param is null');
     }
@@ -59,7 +59,10 @@ function Prompt() {
           <CheckmarkCircleIcon />
           Authorize just this
         </button>
-        <button className="button button-danger" onClick={authorizeHandler('no')}>
+        <button
+          className="button button-danger"
+          onClick={authorizeHandler('no')}
+        >
           <CloseCircleIcon /> Reject
         </button>
       </div>
@@ -85,6 +88,25 @@ function Prompt() {
         condition
       });
     };
+  }
+
+  function getKindDescription(kind: number) {
+    for (const kindCode in KindNames) {
+      if (kindCode.includes('-')) {
+        // check whether the kind is within a recognized range
+        const range = kindCode.split('-');
+        if (kind >= parseInt(range[0]) && kind <= parseInt(range[1])) {
+          return KindNames[kindCode];
+        }
+      } else {
+        // check whether the kind is a specific value
+        const kindCodeN = parseInt(kindCode);
+        if (kind == kindCodeN) {
+          return KindNames[kindCode];
+        }
+      }
+    }
+    return null;
   }
 }
 

@@ -11,7 +11,18 @@ export const KindNames = {
   '41': 'Channel Metadata',
   '42': 'Channel Message',
   '43': 'Channel Hide Message',
-  '44': 'Channel Mute User'
+  '44': 'Channel Mute User',
+  '45-49': 'Public Chat (Reserved)',
+  '1984': 'Reporting',
+  '9734': 'Zap Request',
+  '9735': 'Zap',
+  '10002': 'Relay List Metadata',
+  '22242': 'Client Authentication',
+  '30023': 'Long-form Content',
+  '1000-9999': 'Regular Event',
+  '10000-19999': 'Replaceable Event',
+  '20000-29999': 'Ephemeral Event',
+  '30000-39999': 'Parameterized Replaceable Event'
 };
 
 export enum ConfigurationKeys {
