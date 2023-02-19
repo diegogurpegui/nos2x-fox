@@ -3,7 +3,7 @@ import { render } from 'react-dom';
 import React from 'react';
 
 import { getAllowedCapabilities } from './common';
-import { KindNames, PromptParams } from './types';
+import { AuthorizationCondition, KindNames, PromptParams } from './types';
 
 import ShieldCheckmarkIcon from './assets/icons/shield-checkmark-outline.svg';
 import TimerIcon from './assets/icons/timer-outline.svg';
@@ -48,20 +48,20 @@ function Prompt() {
         </ul>
       </div>
       <div className="prompt-action-buttons">
-        <button className="button" onClick={authorizeHandler('forever')}>
+        <button className="button" onClick={authorizeHandler(AuthorizationCondition.FOREVER)}>
           <ShieldCheckmarkIcon /> Authorize forever
         </button>
-        <button className="button" onClick={authorizeHandler('expirable')}>
+        <button className="button" onClick={authorizeHandler(AuthorizationCondition.EXPIRABLE_5)}>
           <TimerIcon />
           Authorize for 5 minutes
         </button>
-        <button className="button" onClick={authorizeHandler('single')}>
+        <button className="button" onClick={authorizeHandler(AuthorizationCondition.SINGLE)}>
           <CheckmarkCircleIcon />
           Authorize just this
         </button>
         <button
           className="button button-danger"
-          onClick={authorizeHandler('no')}
+          onClick={authorizeHandler(AuthorizationCondition.REJECT)}
         >
           <CloseCircleIcon /> Reject
         </button>

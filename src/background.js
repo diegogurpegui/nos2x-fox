@@ -8,6 +8,7 @@ import {
 import { encrypt, decrypt } from 'nostr-tools/nip04';
 
 import * as Storage from './storage';
+import { AuthorizationCondition } from './types';
 import { PERMISSIONS_REQUIRED, readPermissionLevel } from './common';
 
 const prompts = {};
@@ -90,18 +91,18 @@ async function handleContentScriptMessage({ type, params, host }) {
 
 function handlePromptMessage({ id, condition, host, level }, sender) {
   switch (condition) {
-    case 'forever':
-    case 'expirable':
+    case AuthorizationCondition.FOREVER:
+    case AuthorizationCondition.EXPIRABLE_5:
       prompts[id]?.resolve?.();
       Storage.updatePermission(host, {
         level,
         condition
       });
       break;
-    case 'single':
+    case AuthorizationCondition.SINGLE:
       prompts[id]?.resolve?.();
       break;
-    case 'no':
+    case AuthorizationCondition.REJECT:
       prompts[id]?.reject?.();
       break;
   }

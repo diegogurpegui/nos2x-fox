@@ -43,6 +43,13 @@ export type PermissionConfig = {
   };
 };
 
+export enum AuthorizationCondition {
+  REJECT = 'no',
+  FOREVER = 'forever',
+  EXPIRABLE_5 = 'expirable',
+  SINGLE = 'single'
+}
+
 export type PromptParams = {
   event: {
     kind: number;

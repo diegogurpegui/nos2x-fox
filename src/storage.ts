@@ -1,6 +1,6 @@
 import browser from 'webextension-polyfill';
 
-import { ConfigurationKeys, PermissionConfig, RelaysConfig } from './types';
+import { AuthorizationCondition, ConfigurationKeys, PermissionConfig, RelaysConfig } from './types';
 
 export async function readPrivateKey(): Promise<string> {
   const data = await browser.storage.local.get(ConfigurationKeys.PRIVATE_KEY);
@@ -30,7 +30,7 @@ export async function readPermissions(): Promise<PermissionConfig> {
   var needsUpdate = false;
   for (let host in permissions) {
     if (
-      permissions[host].condition === 'expirable' &&
+      permissions[host].condition === AuthorizationCondition.EXPIRABLE_5 &&
       permissions[host].created_at < Date.now() / 1000 - 5 * 60
     ) {
       delete permissions[host];
