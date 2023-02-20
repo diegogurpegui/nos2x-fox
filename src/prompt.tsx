@@ -51,11 +51,19 @@ function Prompt() {
         <button className="button" onClick={authorizeHandler(AuthorizationCondition.FOREVER)}>
           <ShieldCheckmarkIcon /> Authorize forever
         </button>
-        <button className="button" onClick={authorizeHandler(AuthorizationCondition.EXPIRABLE_5)}>
-          <TimerIcon />
-          Authorize for 5 minutes
-        </button>
-        <button className="button" onClick={authorizeHandler(AuthorizationCondition.SINGLE)}>
+        <div className="button-group">
+          <button className="button" onClick={authorizeHandler(AuthorizationCondition.EXPIRABLE_5M)}>
+            <TimerIcon />
+            Authorize for 5 m
+          </button>
+          <button className="button" onClick={authorizeHandler(AuthorizationCondition.EXPIRABLE_1H)}>
+            1 h
+          </button>
+          <button className="button" onClick={authorizeHandler(AuthorizationCondition.EXPIRABLE_8H)}>
+            8 h
+          </button>
+        </div>
+        <button className="button button-success" onClick={authorizeHandler(AuthorizationCondition.SINGLE)}>
           <CheckmarkCircleIcon />
           Authorize just this
         </button>

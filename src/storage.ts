@@ -1,6 +1,11 @@
 import browser from 'webextension-polyfill';
 
-import { AuthorizationCondition, ConfigurationKeys, PermissionConfig, RelaysConfig } from './types';
+import {
+  AuthorizationCondition,
+  ConfigurationKeys,
+  PermissionConfig,
+  RelaysConfig
+} from './types';
 
 export async function readPrivateKey(): Promise<string> {
   const data = await browser.storage.local.get(ConfigurationKeys.PRIVATE_KEY);
@@ -30,8 +35,12 @@ export async function readPermissions(): Promise<PermissionConfig> {
   var needsUpdate = false;
   for (let host in permissions) {
     if (
-      permissions[host].condition === AuthorizationCondition.EXPIRABLE_5 &&
-      permissions[host].created_at < Date.now() / 1000 - 5 * 60
+      (permissions[host].condition === AuthorizationCondition.EXPIRABLE_5M &&
+        permissions[host].created_at < Date.now() / 1000 - 5 * 60) ||
+      (permissions[host].condition === AuthorizationCondition.EXPIRABLE_1H &&
+        permissions[host].created_at < Date.now() / 1000 - 1 * 60 * 60) ||
+      (permissions[host].condition === AuthorizationCondition.EXPIRABLE_8H &&
+        permissions[host].created_at < Date.now() / 1000 - 8 * 60 * 60)
     ) {
       delete permissions[host];
       needsUpdate = true;
@@ -43,10 +52,11 @@ export async function readPermissions(): Promise<PermissionConfig> {
 }
 
 export async function updatePermission(host: string, permission) {
+  const storedPermissions = (await readPermissions()) || {};
+
   browser.storage.local.set({
     permissions: {
-      ...((await browser.storage.local.get(ConfigurationKeys.PERMISSIONS)
-        .permissions) || {}),
+      ...storedPermissions,
       [host]: {
         ...permission,
         created_at: Math.round(Date.now() / 1000)

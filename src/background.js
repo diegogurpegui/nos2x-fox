@@ -92,7 +92,9 @@ async function handleContentScriptMessage({ type, params, host }) {
 function handlePromptMessage({ id, condition, host, level }, sender) {
   switch (condition) {
     case AuthorizationCondition.FOREVER:
-    case AuthorizationCondition.EXPIRABLE_5:
+    case AuthorizationCondition.EXPIRABLE_5M:
+    case AuthorizationCondition.EXPIRABLE_1H:
+    case AuthorizationCondition.EXPIRABLE_8H:
       prompts[id]?.resolve?.();
       Storage.updatePermission(host, {
         level,

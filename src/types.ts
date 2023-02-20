@@ -46,7 +46,9 @@ export type PermissionConfig = {
 export enum AuthorizationCondition {
   REJECT = 'no',
   FOREVER = 'forever',
-  EXPIRABLE_5 = 'expirable',
+  EXPIRABLE_5M = 'expirable_5m',
+  EXPIRABLE_1H = 'expirable_1h',
+  EXPIRABLE_8H = 'expirable_8h',
   SINGLE = 'single'
 }
 

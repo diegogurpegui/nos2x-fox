@@ -2,6 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { render } from 'react-dom';
 import { useDebouncedCallback } from 'use-debounce';
 import { generatePrivateKey, nip19 } from 'nostr-tools';
+import { format, formatDistance } from 'date-fns';
 
 import { Alert } from './alert';
 
@@ -256,12 +257,17 @@ function Options() {
                       <td>{host}</td>
                       <td>{getPermissionsString(level)}</td>
                       <td>{condition}</td>
-                      <td>
-                        {new Date(created_at * 1000)
-                          .toISOString()
-                          .split('.')[0]
-                          .split('T')
-                          .join(' ')}
+                      <td
+                        style={{ cursor: 'help' }}
+                        title={formatDistance(
+                          new Date(created_at * 1000),
+                          new Date()
+                        )}
+                      >
+                        {format(
+                          new Date(created_at * 1000),
+                          'yyyy-MM-dd HH:mm:ss'
+                        )}
                       </td>
                       <td>
                         <button onClick={handleRevoke} data-domain={host}>
