@@ -5,7 +5,7 @@ import {
   getEventHash,
   getPublicKey
 } from 'nostr-tools';
-import { encrypt, decrypt } from 'nostr-tools/nip04';
+import { nip04 } from 'nostr-tools';
 
 import * as Storage from './storage';
 import { AuthorizationCondition } from './types';
@@ -77,11 +77,11 @@ async function handleContentScriptMessage({ type, params, host }) {
       }
       case 'nip04.encrypt': {
         let { peer, plaintext } = params;
-        return encrypt(sk, peer, plaintext);
+        return nip04.encrypt(sk, peer, plaintext);
       }
       case 'nip04.decrypt': {
         let { peer, ciphertext } = params;
-        return decrypt(sk, peer, ciphertext);
+        return nip04.decrypt(sk, peer, ciphertext);
       }
     }
   } catch (error) {

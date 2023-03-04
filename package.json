@@ -18,10 +18,10 @@
     "react-dom": "^17.0.2",
     "use-boolean-state": "^1.0.2",
     "use-debounce": "^9.0.3",
-    "webextension-polyfill": "^0.8.0"
+    "webextension-polyfill": "^0.10"
   },
   "devDependencies": {
-    "esbuild": "^0.16.15",
+    "esbuild": "^0.17",
     "esbuild-plugin-clean": "^1.0.1",
     "esbuild-plugin-copy": "^2.0.1",
     "esbuild-plugin-svgr": "^1.0.1",
@@ -29,6 +29,7 @@
     "eslint": "^8.6.0",
     "eslint-plugin-babel": "^5.3.1",
     "eslint-plugin-react": "^7.28.0",
-    "prettier": "^2.5.1"
+    "prettier": "^2.5.1",
+    "sass": "^1.58.3"
   }
 }
