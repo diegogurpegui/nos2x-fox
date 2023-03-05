@@ -110,7 +110,12 @@ function handlePromptMessage({ id, condition, host, level }, sender) {
   }
 
   delete prompts[id];
-  browser.windows.remove(sender.tab.windowId);
+  if (browser.windows) {
+    browser.windows.remove(sender.tab.windowId);
+  } else {
+    // Android Firefox
+    browser.tabs.remove(sender.tab.id);
+  }
 }
 
 function promptPermission(host, level, params) {
@@ -123,12 +128,21 @@ function promptPermission(host, level, params) {
   });
 
   return new Promise((resolve, reject) => {
-    browser.windows.create({
-      url: `${browser.runtime.getURL('prompt.html')}?${qs.toString()}`,
-      type: 'popup',
-      width: 600,
-      height: 400
-    });
+    const url = `${browser.runtime.getURL('prompt.html')}?${qs.toString()}`;
+    if (browser.windows) {
+      browser.windows.create({
+        url,
+        type: 'popup',
+        width: 600,
+        height: 400
+      });
+    } else {
+      // Android Firefox
+      browser.tabs.create({
+        url,
+        active: true
+      });
+    }
 
     prompts[id] = { resolve, reject };
   });

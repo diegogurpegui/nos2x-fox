@@ -56,6 +56,8 @@ function Popup() {
     browser.tabs.create({
       url: browser.runtime.getURL('options.html'),
       active: true
+    }).then(() => {
+      window.close();
     });
   }
 
