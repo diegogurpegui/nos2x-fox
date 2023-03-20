@@ -25,10 +25,13 @@ export const KindNames = {
   '30000-39999': 'Parameterized Replaceable Event'
 };
 
+//#region Configuration ----------------------
+
 export enum ConfigurationKeys {
   PRIVATE_KEY = 'private_key',
   RELAYS = 'relays',
-  PERMISSIONS = 'permissions'
+  PERMISSIONS = 'permissions',
+  PROFILES = 'profiles'
 }
 
 export type RelaysConfig = {
@@ -42,6 +45,18 @@ export type PermissionConfig = {
     level: number;
   };
 };
+
+export type ProfileConfig = {
+  privateKey: string;
+  relays?: RelaysConfig;
+  permissions?: PermissionConfig;
+};
+
+export type ProfilesConfig = {
+  [pubKey: string]: ProfileConfig;
+};
+
+//#endregion Configuration ----------------------
 
 export enum AuthorizationCondition {
   REJECT = 'no',

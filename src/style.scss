@@ -59,6 +59,21 @@ code {
 }
 
 /* ---- General styles ---- */
+select {
+  background-color: $color-primary;
+  border: 2px solid $color-primary;
+  border-radius: $button-radius;
+  color: $color-primary-inv;
+  padding: 0.5em 1em;
+  display: flex;
+  flex-grow: 1;
+
+  &:hover {
+    cursor: pointer;
+    background-color: $color-primary-light;
+  }
+}
+
 .alert {
   padding: 0.5em 0.7em;
   border-radius: 0.3em;
@@ -220,6 +235,15 @@ button,
   }
 }
 
+/* ---- Modals ---- */
+.modal {
+  display: none;
+
+  &.show {
+    display: block;
+  }
+}
+
 /* ---- Tables ---- */
 table {
   border-collapse: collapse;
@@ -298,21 +322,10 @@ input,
     code {
       margin-right: 0.5em;
     }
-  }
 
-  select {
-    background-color: $color-primary;
-    border: 2px solid $color-primary;
-    border-top-right-radius: 0.3em;
-    border-bottom-right-radius: 0.3em;
-    color: $color-primary-inv;
-    padding: 0.5em 1em;
-    display: flex;
-    flex-grow: 1;
-
-    &:hover {
-      cursor: pointer;
-      background-color: $color-primary-light;
+    select {
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
     }
   }
 }
@@ -339,6 +352,22 @@ input,
 
     main {
       flex-grow: 1;
+
+      section {
+        h3 {
+          display: flex;
+          &::after {
+            content: '';
+            display: flex;
+            float: right;
+            border-bottom: 1px dotted black;
+            flex: 1 auto;
+            height: 1px;
+            margin-left: 1em;
+            align-self: center;
+          }
+        }
+      }
 
       .relays-list {
         display: flex;

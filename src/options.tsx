@@ -1,11 +1,17 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { render } from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import { useDebouncedCallback } from 'use-debounce';
 import { generatePrivateKey, nip19 } from 'nostr-tools';
 import { format, formatDistance } from 'date-fns';
 
-import { Alert } from './alert';
+import { Alert, Modal } from './components';
 
+import {
+  PermissionConfig,
+  ProfileConfig,
+  ProfilesConfig,
+  RelaysConfig
+} from './types';
 import * as Storage from './storage';
 import { getPermissionsString } from './common';
 import logotype from './assets/logo/logotype.png';
@@ -20,6 +26,8 @@ type RelayConfig = {
 };
 
 function Options() {
+  let [activeProfilePubKey, setActiveProfilePubKey] = useState('');
+  let [profiles, setProfiles] = useState<ProfilesConfig>({});
   let [key, setKey] = useState('');
   let [isKeyHidden, setKeyHidden] = useState(true);
   let [relays, setRelays] = useState([]);
@@ -36,14 +44,14 @@ function Options() {
 
     Storage.readRelays().then(relays => {
       if (relays) {
-        let relaysList: RelayConfig[] = [];
-        for (let url in relays) {
-          relaysList.push({
-            url,
-            policy: relays[url]
-          });
-        }
+        let relaysList = convertRelaysToUIArray(relays);
         setRelays(relaysList);
+      }
+    });
+
+    Storage.readProfiles().then(profiles => {
+      if (profiles) {
+        setProfiles(profiles);
       }
     });
   }, []);
@@ -70,6 +78,49 @@ function Options() {
     }
   });
 
+  //#region Profiles
+
+  function loadProfile(pubKey: string) {
+    const profile: ProfileConfig = profiles[pubKey];
+    setActiveProfilePubKey(pubKey);
+    setRelays(convertRelaysToUIArray(profile.relays));
+    setPermissions(convertPermissionsToUIObject(profile.permissions));
+    setKey(profile.privateKey);
+  }
+
+  function handleActiveProfileChange(event) {
+    const pubKey = event.target.value;
+    const profile = profiles[pubKey];
+    setActiveProfilePubKey(pubKey);
+    loadProfile(pubKey);
+  }
+
+  function handleNewProfileClick(event) {
+    const newProfile: ProfileConfig = {
+      privateKey: ''
+    };
+    setProfiles({ ...profiles, ...{ ['']: newProfile } });
+    setActiveProfilePubKey('');
+
+    setRelays([]);
+    setPermissions(null);
+    setKey('');
+  }
+
+  function isNewProfilePending() {
+    return Object.keys(profiles).includes('');
+  }
+
+  function getActiveProfile() {
+    return profiles[activeProfilePubKey];
+  }
+
+  function handleExportProfileClick() {
+    const profile = getActiveProfile();
+  }
+
+  //#endregion Profiles
+
   //#region Private key
 
   async function savePrivateKey() {
@@ -85,7 +136,9 @@ function Options() {
     await Storage.updatePrivateKey(hexOrEmptyKey);
 
     if (hexOrEmptyKey !== '') {
-      setKey(nip19.nsecEncode(hexOrEmptyKey));
+      const privKeyNip19 = nip19.nsecEncode(hexOrEmptyKey);
+      setKey(privKeyNip19);
+      profiles[activeProfilePubKey].privateKey = privKeyNip19;
     }
 
     showMessage('Saved private key!', 'success');
@@ -114,6 +167,19 @@ function Options() {
 
   //#region Permissions
 
+  function convertPermissionsToUIObject(permissions?: PermissionConfig) {
+    if (!permissions) return undefined;
+
+    return Object.entries(permissions).map(
+      ([host, { level, condition, created_at }]) => ({
+        host,
+        level,
+        condition,
+        created_at
+      })
+    );
+  }
+
   async function handleRevoke(e) {
     e.preventDefault();
     let host = e.target.dataset.domain;
@@ -126,22 +192,27 @@ function Options() {
 
   function loadPermissions() {
     Storage.readPermissions().then(permissions => {
-      setPermissions(
-        Object.entries(permissions).map(
-          ([host, { level, condition, created_at }]) => ({
-            host,
-            level,
-            condition,
-            created_at
-          })
-        )
-      );
+      setPermissions(convertPermissionsToUIObject(permissions));
     });
   }
 
   //#endregion Permissions
 
   //#region Relays
+
+  function convertRelaysToUIArray(relays?: RelaysConfig) {
+    if (!relays) return [];
+
+    let relaysList: RelayConfig[] = [];
+    for (let url in relays) {
+      relaysList.push({
+        url,
+        policy: relays[url]
+      });
+    }
+
+    return relaysList;
+  }
 
   const saveRelaysInStorage = useDebouncedCallback(async () => {
     await Storage.updateRelays(
@@ -216,6 +287,35 @@ function Options() {
         {message && <Alert message={message} type={messageType} />}
 
         <section>
+          <h3>Profile</h3>
+          <div className="form-field">
+            <label htmlFor="active-profile">Active profile:</label>
+            <div className="select" id="active-profile">
+              <select
+                value={activeProfilePubKey}
+                onChange={handleActiveProfileChange}
+              >
+                {Object.keys(profiles).map(profilePubKey => (
+                  <option value={profilePubKey} key={profilePubKey}>
+                    {profilePubKey == ''
+                      ? '(new profile)'
+                      : nip19.npubEncode(profilePubKey)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <button
+            disabled={isNewProfilePending()}
+            onClick={handleNewProfileClick}
+          >
+            New profile
+          </button>
+          <button onClick={handleExportProfileClick}>Export profile</button>
+        </section>
+
+        <section>
+          <h3>Keys</h3>
           <div className="form-field">
             <label htmlFor="private-key">Private key:</label>
             <div className="input-group">
@@ -327,8 +427,13 @@ function Options() {
         </section>
       </main>
       <footer>version {version}</footer>
+
+      <Modal show={true}>
+        <p>This is the JSON that represents your profile</p>
+      </Modal>
     </>
   );
 }
 
-render(<Options />, document.getElementById('main'));
+const root = createRoot(document.getElementById('main'));
+root.render(<Options />);

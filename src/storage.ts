@@ -1,9 +1,12 @@
 import browser from 'webextension-polyfill';
+import { getPublicKey } from 'nostr-tools';
 
 import {
   AuthorizationCondition,
   ConfigurationKeys,
   PermissionConfig,
+  ProfileConfig,
+  ProfilesConfig,
   RelaysConfig
 } from './types';
 
@@ -50,7 +53,6 @@ export async function readPermissions(): Promise<PermissionConfig> {
 
   return permissions;
 }
-
 export async function updatePermission(host: string, permission) {
   const storedPermissions = (await readPermissions()) || {};
 
@@ -64,10 +66,55 @@ export async function updatePermission(host: string, permission) {
     }
   });
 }
-
 export async function removePermissions(host: string) {
   let { permissions = {} }: { permissions: PermissionConfig } =
     await browser.storage.local.get(ConfigurationKeys.PERMISSIONS);
   delete permissions[host];
   browser.storage.local.set({ permissions });
+}
+
+export async function readProfiles(): Promise<ProfilesConfig> {
+  let { profiles = {} }: { [ConfigurationKeys.PROFILES]: ProfilesConfig } =
+    await browser.storage.local.get(ConfigurationKeys.PROFILES);
+
+  const pubKeys = Object.keys(profiles);
+  // if there are no profiles, check if there's an active profile
+  if (pubKeys.length == 0) {
+    const privateKey = await readPrivateKey();
+
+    if (privateKey) {
+      // there is a private key, so I need to initialize the profiles
+      const profile: ProfileConfig = {
+        privateKey,
+        relays: await readRelays(),
+        permissions: await readPermissions()
+      };
+      const pubKey = getPublicKey(privateKey);
+
+      profiles[pubKey] = profile;
+      // save it
+      browser.storage.local.set({ [ConfigurationKeys.PROFILES]: profiles });
+    }
+  }
+
+  return profiles;
+}
+export async function addProfile(
+  pubKey: string,
+  profile: ProfileConfig
+): Promise<ProfilesConfig> {
+  let storedProfiles = (await readProfiles()) || {};
+
+  storedProfiles = {
+    ...storedProfiles,
+    [pubKey]: {
+      ...profile
+    }
+  };
+
+  browser.storage.local.set({
+    [ConfigurationKeys.PROFILES]: storedProfiles
+  });
+
+  return storedProfiles;
 }
