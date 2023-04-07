@@ -1,9 +1,42 @@
 import browser from 'webextension-polyfill';
-import React from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 
 interface ModalProps {
   show: boolean;
+  onClose: () => {};
 }
-export function Modal({ show, children }: React.PropsWithChildren<ModalProps>) {
-  return <div class={`modal ${show ? 'show' : ''}`}>{children}</div>;
+
+export function Modal({
+  show,
+  onClose,
+  children
+}: React.PropsWithChildren<ModalProps>) {
+  const modalRef = useRef<HTMLDivElement>(null);
+
+  // const hide = () => {
+  //   if (modalRef.current) {
+  //     modalRef.current.style.display = 'none';
+  //   }
+  // };
+  // const display = () => {
+  //   if (modalRef.current) {
+  //     modalRef.current.style.display = 'flex';
+  //   }
+  // };
+
+  const handleOverlayClick = () => {
+    show = false;
+    if (onClose) onClose();
+  };
+
+  // useEffect(() => {
+  //   console.log('useEffect show', show);
+  // }, [show]);
+
+  return show ? (
+    <div className={`modal-wrapper`} ref={modalRef}>
+      <div className={`modal`}>{children}</div>
+      <div className="overlay" onClick={handleOverlayClick}></div>
+    </div>
+  ) : null;
 }

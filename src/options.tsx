@@ -15,6 +15,7 @@ import {
 import * as Storage from './storage';
 import { getPermissionsString } from './common';
 import logotype from './assets/logo/logotype.png';
+import CopyIcon from './assets/icons/copy-outline.svg';
 import DiceIcon from './assets/icons/dice-outline.svg';
 import RadioIcon from './assets/icons/radio-outline.svg';
 
@@ -28,6 +29,9 @@ type RelayConfig = {
 function Options() {
   let [activeProfilePubKey, setActiveProfilePubKey] = useState('');
   let [profiles, setProfiles] = useState<ProfilesConfig>({});
+  let [profileJson, setProfileJson] = useState('');
+  let [isModalShown, setModalShown] = useState(false);
+
   let [key, setKey] = useState('');
   let [isKeyHidden, setKeyHidden] = useState(true);
   let [relays, setRelays] = useState([]);
@@ -35,6 +39,7 @@ function Options() {
   let [permissions, setPermissions] = useState();
   let [message, setMessage] = useState('');
   let [messageType, setMessageType] = useState('info');
+
   let [version, setVersion] = useState('0.0.0');
 
   useEffect(() => {
@@ -52,6 +57,8 @@ function Options() {
     Storage.readProfiles().then(profiles => {
       if (profiles) {
         setProfiles(profiles);
+        // TODO: get this from storage instead of assuming first
+        setActiveProfilePubKey(Object.keys(profiles)[0]);
       }
     });
   }, []);
@@ -111,12 +118,23 @@ function Options() {
     return Object.keys(profiles).includes('');
   }
 
-  function getActiveProfile() {
+  function getActiveProfile(): ProfileConfig {
     return profiles[activeProfilePubKey];
   }
 
   function handleExportProfileClick() {
     const profile = getActiveProfile();
+    const profileJson = JSON.stringify(profile);
+    setProfileJson(profileJson);
+    setModalShown(true);
+  }
+
+  function handleExportProfileCopyClick() {
+    navigator.clipboard.writeText(profileJson);
+  }
+
+  function handleModalClose() {
+    setModalShown(false);
   }
 
   //#endregion Profiles
@@ -305,13 +323,15 @@ function Options() {
               </select>
             </div>
           </div>
-          <button
-            disabled={isNewProfilePending()}
-            onClick={handleNewProfileClick}
-          >
-            New profile
-          </button>
-          <button onClick={handleExportProfileClick}>Export profile</button>
+          <div className="profile-actions">
+            <button
+              disabled={isNewProfilePending()}
+              onClick={handleNewProfileClick}
+            >
+              New profile
+            </button>
+            <button onClick={handleExportProfileClick}>Export profile</button>
+          </div>
         </section>
 
         <section>
@@ -428,8 +448,15 @@ function Options() {
       </main>
       <footer>version {version}</footer>
 
-      <Modal show={true}>
-        <p>This is the JSON that represents your profile</p>
+      <Modal show={isModalShown} onClose={handleModalClose}>
+        <p>
+          This is the JSON that represents your profile (WARNING: it contains
+          your private key):
+        </p>
+        <code>{profileJson}</code>
+        <button onClick={handleExportProfileCopyClick}>
+          <CopyIcon /> Copy
+        </button>
       </Modal>
     </>
   );
