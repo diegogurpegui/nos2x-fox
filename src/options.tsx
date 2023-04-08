@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useDebouncedCallback } from 'use-debounce';
-import { generatePrivateKey, nip19 } from 'nostr-tools';
+import { getPublicKey, generatePrivateKey, nip19 } from 'nostr-tools';
 import { format, formatDistance } from 'date-fns';
 
 import { Alert, Modal } from './components';
@@ -137,6 +137,10 @@ function Options() {
     setModalShown(false);
   }
 
+  function saveProfiles() {
+    Storage.updateProfiles(profiles);
+  }
+
   //#endregion Profiles
 
   //#region Private key
@@ -149,14 +153,25 @@ function Options() {
     try {
       let { type, data } = nip19.decode(key);
       if (type === 'nsec') hexOrEmptyKey = data;
-    } catch (_) {}
+    } catch (err) {
+      console.error('Converting key to hexa (decode NIP19)', err);
+    }
 
     await Storage.updatePrivateKey(hexOrEmptyKey);
 
     if (hexOrEmptyKey !== '') {
       const privKeyNip19 = nip19.nsecEncode(hexOrEmptyKey);
       setKey(privKeyNip19);
-      profiles[activeProfilePubKey].privateKey = privKeyNip19;
+
+      // if new profile need to re-calculate pub key
+      const newPubKey = getPublicKey(hexOrEmptyKey);
+      profiles[newPubKey] = profiles[activeProfilePubKey];
+      profiles[newPubKey].privateKey = privKeyNip19;
+      delete profiles[activeProfilePubKey];
+      setActiveProfilePubKey(newPubKey);
+      loadProfile(newPubKey);
+
+      saveProfiles();
     }
 
     showMessage('Saved private key!', 'success');
@@ -343,6 +358,7 @@ function Options() {
                 id="private-key"
                 type={isKeyHidden ? 'password' : 'text'}
                 value={key}
+                readOnly={activeProfilePubKey != ''}
                 onChange={handleKeyChange}
                 onFocus={() => setKeyHidden(false)}
                 onBlur={() => setKeyHidden(true)}
@@ -352,7 +368,10 @@ function Options() {
               </button>
             </div>
           </div>
-          <button disabled={!isKeyValid()} onClick={savePrivateKey}>
+          <button
+            disabled={!isKeyValid() || activeProfilePubKey != ''}
+            onClick={savePrivateKey}
+          >
             Save key
           </button>
         </section>

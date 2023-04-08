@@ -296,6 +296,11 @@ input,
   padding: 0.5em 1em;
   display: flex;
   flex-grow: 1;
+
+  &:read-only {
+    color: grey;
+    cursor: not-allowed;
+  }
 }
 
 .pubkey-show {

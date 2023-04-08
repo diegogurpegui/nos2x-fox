@@ -99,22 +99,13 @@ export async function readProfiles(): Promise<ProfilesConfig> {
 
   return profiles;
 }
-export async function addProfile(
-  pubKey: string,
-  profile: ProfileConfig
+
+export async function updateProfiles(
+  profiles: ProfilesConfig
 ): Promise<ProfilesConfig> {
-  let storedProfiles = (await readProfiles()) || {};
-
-  storedProfiles = {
-    ...storedProfiles,
-    [pubKey]: {
-      ...profile
-    }
-  };
-
   browser.storage.local.set({
-    [ConfigurationKeys.PROFILES]: storedProfiles
+    [ConfigurationKeys.PROFILES]: profiles
   });
 
-  return storedProfiles;
+  return profiles;
 }
