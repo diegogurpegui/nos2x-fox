@@ -10,27 +10,28 @@ import {
   RelaysConfig
 } from './types';
 
-export async function readPrivateKey(): Promise<string> {
+export async function readActivePrivateKey(): Promise<string> {
   const data = await browser.storage.local.get(ConfigurationKeys.PRIVATE_KEY);
   return data[ConfigurationKeys.PRIVATE_KEY];
 }
-export async function updatePrivateKey(privateKey: string) {
+export async function updateActivePrivateKey(privateKey: string) {
+  console.log('Setting new pubKey:', getPublicKey(privateKey));
   return browser.storage.local.set({
     [ConfigurationKeys.PRIVATE_KEY]: privateKey
   });
 }
 
-export async function readRelays(): Promise<RelaysConfig> {
+export async function readActiveRelays(): Promise<RelaysConfig> {
   const data = await browser.storage.local.get(ConfigurationKeys.RELAYS);
   return data[ConfigurationKeys.RELAYS];
 }
-export async function updateRelays(relays) {
+export async function updateActiveRelays(relays) {
   return browser.storage.local.set({
     relays: relays
   });
 }
 
-export async function readPermissions(): Promise<PermissionConfig> {
+export async function readActivePermissions(): Promise<PermissionConfig> {
   let { permissions = {} }: { permissions: PermissionConfig } =
     await browser.storage.local.get(ConfigurationKeys.PERMISSIONS);
 
@@ -53,8 +54,8 @@ export async function readPermissions(): Promise<PermissionConfig> {
 
   return permissions;
 }
-export async function updatePermission(host: string, permission) {
-  const storedPermissions = (await readPermissions()) || {};
+export async function updateActivePermission(host: string, permission) {
+  const storedPermissions = (await readActivePermissions()) || {};
 
   browser.storage.local.set({
     permissions: {
@@ -66,7 +67,7 @@ export async function updatePermission(host: string, permission) {
     }
   });
 }
-export async function removePermissions(host: string) {
+export async function removeActivePermissions(host: string) {
   let { permissions = {} }: { permissions: PermissionConfig } =
     await browser.storage.local.get(ConfigurationKeys.PERMISSIONS);
   delete permissions[host];
@@ -80,14 +81,14 @@ export async function readProfiles(): Promise<ProfilesConfig> {
   const pubKeys = Object.keys(profiles);
   // if there are no profiles, check if there's an active profile
   if (pubKeys.length == 0) {
-    const privateKey = await readPrivateKey();
+    const privateKey = await readActivePrivateKey();
 
     if (privateKey) {
       // there is a private key, so I need to initialize the profiles
       const profile: ProfileConfig = {
         privateKey,
-        relays: await readRelays(),
-        permissions: await readPermissions()
+        relays: await readActiveRelays(),
+        permissions: await readActivePermissions()
       };
       const pubKey = getPublicKey(privateKey);
 

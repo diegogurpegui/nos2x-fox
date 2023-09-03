@@ -12,18 +12,18 @@ import CopyIcon from './assets/icons/copy-outline.svg';
 import CogIcon from './assets/icons/cog-outline.svg';
 
 function Popup() {
-  let [key, setKey] = useState('');
-  let [keyNIP19, setKeyNIP19] = useState('');
+  let [publicKeyHexa, setPublicKeyHexa] = useState('');
+  let [publiKeyNIP19, setPublicKeyNIP19] = useState('');
   let [selectedKeyType, setSelectedKeyType] = useState('npub');
 
   useEffect(() => {
-    Storage.readPrivateKey().then(privateKey => {
+    Storage.readActivePrivateKey().then(privateKey => {
       if (privateKey) {
         const pubKey = getPublicKey(privateKey);
-        setKey(pubKey);
-        setKeyNIP19(nip19.npubEncode(pubKey));
+        setPublicKeyHexa(pubKey);
+        setPublicKeyNIP19(nip19.npubEncode(pubKey));
 
-        Storage.readRelays().then(relays => {
+        Storage.readActiveRelays().then(relays => {
           if (relays) {
             let relaysList: string[] = [];
             for (let url in relays) {
@@ -41,9 +41,11 @@ function Popup() {
             // }
           }
         });
+
+        console.log(`The profile for pubkey '${pubKey}' was loaded.`);
       } else {
-        setKey(null);
-        setKeyNIP19(null);
+        setPublicKeyHexa(null);
+        setPublicKeyNIP19(null);
       }
     });
   }, []);
@@ -62,7 +64,7 @@ function Popup() {
   }
 
   function clipboardCopyPubKey() {
-    navigator.clipboard.writeText(selectedKeyType === 'hex' ? key : keyNIP19);
+    navigator.clipboard.writeText(selectedKeyType === 'hex' ? publicKeyHexa : publiKeyNIP19);
   }
 
   return (
@@ -70,7 +72,7 @@ function Popup() {
       <h1>
         <img src={logotype} alt="nos2x-fox" />
       </h1>
-      {key === null ? (
+      {publicKeyHexa === null ? (
         <p>
           You don't have a private key set. Use the{' '}
           <a href="#" onClick={goToOptionsPage}>
@@ -84,7 +86,7 @@ function Popup() {
           <div className="public-key">
             <div className="pubkey-show">
               <code>
-                {truncatePublicKeys(selectedKeyType === 'hex' ? key : keyNIP19)}
+                {truncatePublicKeys(selectedKeyType === 'hex' ? publicKeyHexa : publiKeyNIP19)}
               </code>
               <button className="button-onlyicon" onClick={clipboardCopyPubKey}>
                 <CopyIcon />

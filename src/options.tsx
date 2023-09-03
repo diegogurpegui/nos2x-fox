@@ -27,12 +27,12 @@ type RelayConfig = {
 };
 
 function Options() {
-  let [activeProfilePubKey, setActiveProfilePubKey] = useState('');
+  let [activeProfilePubKey, setActiveProfilePubKey] = useState<string>('');
   let [profiles, setProfiles] = useState<ProfilesConfig>({});
   let [profileJson, setProfileJson] = useState('');
   let [isModalShown, setModalShown] = useState(false);
 
-  let [key, setKey] = useState('');
+  let [privateKey, setPrivateKey] = useState('');
   let [isKeyHidden, setKeyHidden] = useState(true);
   let [relays, setRelays] = useState([]);
   let [newRelayURL, setNewRelayURL] = useState('');
@@ -42,12 +42,17 @@ function Options() {
 
   let [version, setVersion] = useState('0.0.0');
 
+  /**
+   * Load options from Storage
+   */
   useEffect(() => {
-    Storage.readPrivateKey().then(privateKey => {
-      if (privateKey) setKey(nip19.nsecEncode(privateKey));
+    Storage.readActivePrivateKey().then(privateKey => {
+      if (privateKey) {
+        setPrivateKey(nip19.nsecEncode(privateKey));
+      }
     });
 
-    Storage.readRelays().then(relays => {
+    Storage.readActiveRelays().then(relays => {
       if (relays) {
         let relaysList = convertRelaysToUIArray(relays);
         setRelays(relaysList);
@@ -57,12 +62,22 @@ function Options() {
     Storage.readProfiles().then(profiles => {
       if (profiles) {
         setProfiles(profiles);
-        // TODO: get this from storage instead of assuming first
-        setActiveProfilePubKey(Object.keys(profiles)[0]);
+
+        // load active profile
+        let activePubKey = Object.keys(profiles)[0];
+        if (privateKey != '') {
+          activePubKey = getPublicKey(privateKey);
+          console.log('From private key', activePubKey);
+        }
+        console.log('Active pub key', activePubKey);
+        setActiveProfilePubKey(activePubKey);
       }
     });
   }, []);
 
+  /**
+   * Initialization
+   */
   useEffect(() => {
     loadPermissions();
 
@@ -71,11 +86,21 @@ function Options() {
       .then(json => setVersion(json.version));
   }, []);
 
+  /**
+   * When relays are updated
+   */
   useEffect(() => {
     saveRelaysInStorage()
       ?.then(() => console.log('Relays stored.'))
       .catch(err => console.error('Error storing relays', err));
   }, [relays]);
+
+  /**
+   * When active public key changes
+   */
+  useEffect(() => {
+    loadProfile(activeProfilePubKey)
+  }, [activeProfilePubKey]);
 
   const showMessage = useCallback((msg, type = 'info', timeout = 3000) => {
     setMessageType(type);
@@ -89,17 +114,22 @@ function Options() {
 
   function loadProfile(pubKey: string) {
     const profile: ProfileConfig = profiles[pubKey];
-    setActiveProfilePubKey(pubKey);
+    if (!profile) {
+      console.warn(`The profile for pubkey '${pubKey}' does not exist.`);
+      return;
+    }
+    // setActiveProfilePubKey(pubKey);
     setRelays(convertRelaysToUIArray(profile.relays));
     setPermissions(convertPermissionsToUIObject(profile.permissions));
-    setKey(profile.privateKey);
+    setPrivateKey(profile.privateKey);
+
+    console.log(`The profile for pubkey '${pubKey}' was loaded.`);
   }
 
   function handleActiveProfileChange(event) {
     const pubKey = event.target.value;
-    const profile = profiles[pubKey];
     setActiveProfilePubKey(pubKey);
-    loadProfile(pubKey);
+    // loadProfile(pubKey);
   }
 
   function handleNewProfileClick(event) {
@@ -111,7 +141,7 @@ function Options() {
 
     setRelays([]);
     setPermissions(null);
-    setKey('');
+    setPrivateKey('');
   }
 
   function isNewProfilePending() {
@@ -148,20 +178,20 @@ function Options() {
   async function savePrivateKey() {
     if (!isKeyValid()) return;
 
-    let hexOrEmptyKey = key;
+    let hexOrEmptyKey = privateKey;
 
     try {
-      let { type, data } = nip19.decode(key);
+      let { type, data } = nip19.decode(privateKey);
       if (type === 'nsec') hexOrEmptyKey = data;
     } catch (err) {
       console.error('Converting key to hexa (decode NIP19)', err);
     }
 
-    await Storage.updatePrivateKey(hexOrEmptyKey);
+    await Storage.updateActivePrivateKey(hexOrEmptyKey);
 
     if (hexOrEmptyKey !== '') {
       const privKeyNip19 = nip19.nsecEncode(hexOrEmptyKey);
-      setKey(privKeyNip19);
+      setPrivateKey(privKeyNip19);
 
       // if new profile need to re-calculate pub key
       const newPubKey = getPublicKey(hexOrEmptyKey);
@@ -169,7 +199,7 @@ function Options() {
       profiles[newPubKey].privateKey = privKeyNip19;
       delete profiles[activeProfilePubKey];
       setActiveProfilePubKey(newPubKey);
-      loadProfile(newPubKey);
+      // loadProfile(newPubKey);
 
       saveProfiles();
     }
@@ -178,10 +208,10 @@ function Options() {
   }
 
   function isKeyValid() {
-    if (key === '') return true;
-    if (key.match(/^[a-f0-9]{64}$/)) return true;
+    if (privateKey === '') return true;
+    if (privateKey.match(/^[a-f0-9]{64}$/)) return true;
     try {
-      if (nip19.decode(key).type === 'nsec') return true;
+      if (nip19.decode(privateKey).type === 'nsec') return true;
     } catch (_) {}
     console.log('bad');
     return false;
@@ -189,11 +219,11 @@ function Options() {
 
   async function handleKeyChange(e) {
     let key = e.target.value.toLowerCase().trim();
-    setKey(key);
+    setPrivateKey(key);
   }
 
   async function generateRandomPrivateKey() {
-    setKey(nip19.nsecEncode(generatePrivateKey()));
+    setPrivateKey(nip19.nsecEncode(generatePrivateKey()));
   }
 
   //#endregion Private key
@@ -217,14 +247,14 @@ function Options() {
     e.preventDefault();
     let host = e.target.dataset.domain;
     if (window.confirm(`Revoke all permissions from ${host}?`)) {
-      await Storage.removePermissions(host);
+      await Storage.removeActivePermissions(host);
       showMessage(`Removed permissions from ${host}`);
       loadPermissions();
     }
   }
 
   function loadPermissions() {
-    Storage.readPermissions().then(permissions => {
+    Storage.readActivePermissions().then(permissions => {
       setPermissions(convertPermissionsToUIObject(permissions));
     });
   }
@@ -248,7 +278,7 @@ function Options() {
   }
 
   const saveRelaysInStorage = useDebouncedCallback(async () => {
-    await Storage.updateRelays(
+    await Storage.updateActiveRelays(
       Object.fromEntries(
         relays
           .filter(({ url }) => url.trim() !== '')
@@ -357,7 +387,7 @@ function Options() {
               <input
                 id="private-key"
                 type={isKeyHidden ? 'password' : 'text'}
-                value={key}
+                value={privateKey}
                 readOnly={activeProfilePubKey != ''}
                 onChange={handleKeyChange}
                 onFocus={() => setKeyHidden(false)}

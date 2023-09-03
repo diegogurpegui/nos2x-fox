@@ -1,4 +1,4 @@
-import { readPermissions } from './storage';
+import { readActivePermissions } from './storage';
 
 export const PERMISSIONS_REQUIRED = {
   getPublicKey: 1,
@@ -51,7 +51,7 @@ export function getPermissionsString(permission) {
 }
 
 export async function readPermissionLevel(host: string): Promise<number> {
-  return (await readPermissions())[host]?.level || 0;
+  return (await readActivePermissions())[host]?.level || 0;
 }
 
 export function truncatePublicKeys(
