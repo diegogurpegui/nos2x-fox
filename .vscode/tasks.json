@@ -1,13 +1,18 @@
 {
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"type": "npm",
-			"script": "build-hosted",
-			"group": "build",
-			"problemMatcher": [],
-			"label": "npm: build-hosted",
-			"detail": "./build.js prod-hosted"
-		}
-	]
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "npm",
+      "script": "build-hosted",
+      "group": "build",
+      "problemMatcher": [],
+      "label": "npm: build-hosted",
+      "detail": "./build.js prod-hosted",
+      "presentation": {
+        "reveal": "silent",
+        "revealProblems": "onProblem",
+        "close": true
+      }
+    }
+  ]
 }
