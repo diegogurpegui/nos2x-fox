@@ -15,14 +15,16 @@ window.addEventListener('message', async message => {
   if (message.data.ext !== 'nos2x-fox') return;
 
   // pass on to background
-  var response;
+  let response;
   try {
+    console.log('Calling nos2x-fox...');
     response = await browser.runtime.sendMessage({
       type: message.data.type,
       params: message.data.params,
       host: location.host
     });
   } catch (error) {
+    console.error('Error from calling extension.', error);
     response = { error };
   }
 
