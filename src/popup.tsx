@@ -39,21 +39,23 @@ function Popup() {
    * When active public key changes
    */
   useEffect(() => {
-    setPublicKeyNIP19(nip19.npubEncode(publicKeyHexa));
+    if (publicKeyHexa) {
+      setPublicKeyNIP19(nip19.npubEncode(publicKeyHexa));
 
-    Storage.readActiveRelays().then(relays => {
-      if (relays) {
-        let relaysList: string[] = [];
-        for (let url in relays) {
-          if (relays[url].write) {
-            relaysList.push(url);
-            if (relaysList.length >= 3) break;
+      Storage.readActiveRelays().then(relays => {
+        if (relays) {
+          let relaysList: string[] = [];
+          for (let url in relays) {
+            if (relays[url].write) {
+              relaysList.push(url);
+              if (relaysList.length >= 3) break;
+            }
           }
         }
-      }
-    });
+      });
 
-    console.log(`The profile for pubkey '${publicKeyHexa}' was loaded.`);
+      console.log(`The profile for pubkey '${publicKeyHexa}' was loaded.`);
+    }
   }, [publicKeyHexa]);
 
   function handleKeyTypeSelect(event) {
