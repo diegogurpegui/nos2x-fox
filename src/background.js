@@ -11,15 +11,15 @@ import * as Storage from './storage';
 import { AuthorizationCondition } from './types';
 import { PERMISSIONS_REQUIRED, readPermissionLevel } from './common';
 
-const prompts = {};
+let openPrompt = null;
 
-browser.runtime.onMessage.addListener(async (req, sender) => {
-  let { prompt } = req;
+browser.runtime.onMessage.addListener((message, sender) => {
+  let { prompt } = message;
 
   if (prompt) {
-    return handlePromptMessage(req, sender);
+    return handlePromptMessage(message, sender);
   } else {
-    return handleContentScriptMessage(req);
+    return handleContentScriptMessage(message);
   }
 });
 
@@ -38,17 +38,24 @@ async function handleContentScriptMessage({ type, params, host }) {
   } else {
     // ask for authorization
     try {
-      await promptPermission(host, PERMISSIONS_REQUIRED[type], params);
-      // authorized, proceed
-    } catch (_) {
-      // not authorized, stop here
-      return {
-        error: `insufficient permissions, required ${PERMISSIONS_REQUIRED[type]}`
-      };
+      const isAllowed = await promptPermission(
+        host,
+        PERMISSIONS_REQUIRED[type],
+        params
+      );
+      if (!isAllowed) {
+        // not authorized, stop here
+        return {
+          error: `Insufficient permissions, required ${PERMISSIONS_REQUIRED[type]}`
+        };
+      }
+    } catch (error) {
+      console.error('Error asking for permission.', error);
+      return { error: { message: error.message, stack: error.stack } };
     }
   }
 
-  let privateKey = await Storage.readPrivateKey();
+  let privateKey = await Storage.readActivePrivateKey();
   if (!privateKey) {
     return { error: 'no private key found' };
   }
@@ -61,7 +68,7 @@ async function handleContentScriptMessage({ type, params, host }) {
         return getPublicKey(sk);
       }
       case 'getRelays': {
-        let relays = await Storage.readRelays();
+        let relays = await Storage.readActiveRelays();
         return relays || {};
       }
       case 'signEvent': {
@@ -90,31 +97,40 @@ async function handleContentScriptMessage({ type, params, host }) {
 }
 
 function handlePromptMessage({ id, condition, host, level }, sender) {
-  switch (condition) {
-    case AuthorizationCondition.FOREVER:
-    case AuthorizationCondition.EXPIRABLE_5M:
-    case AuthorizationCondition.EXPIRABLE_1H:
-    case AuthorizationCondition.EXPIRABLE_8H:
-      prompts[id]?.resolve?.();
-      Storage.updatePermission(host, {
-        level,
-        condition
-      });
-      break;
-    case AuthorizationCondition.SINGLE:
-      prompts[id]?.resolve?.();
-      break;
-    case AuthorizationCondition.REJECT:
-      prompts[id]?.reject?.();
-      break;
-  }
+  try {
+    switch (condition) {
+      case AuthorizationCondition.FOREVER:
+      case AuthorizationCondition.EXPIRABLE_5M:
+      case AuthorizationCondition.EXPIRABLE_1H:
+      case AuthorizationCondition.EXPIRABLE_8H:
+        openPrompt?.resolve?.(true);
+        Storage.updateActivePermission(host, {
+          level,
+          condition
+        });
+        break;
+      case AuthorizationCondition.SINGLE:
+        openPrompt?.resolve?.(true);
+        break;
+      case AuthorizationCondition.REJECT:
+        openPrompt?.resolve?.(false);
+        break;
+    }
 
-  delete prompts[id];
-  if (browser.windows) {
-    browser.windows.remove(sender.tab.windowId);
-  } else {
-    // Android Firefox
-    browser.tabs.remove(sender.tab.id);
+    openPrompt = null;
+
+    // close prompt
+    if (sender) {
+      if (browser.windows) {
+        browser.windows.remove(sender.tab.windowId);
+      } else {
+        // Android Firefox
+        browser.tabs.remove(sender.tab.id);
+      }
+    }
+  } catch (error) {
+    console.error('Error handling prompt response.', error);
+    openPrompt?.reject?.(error);
   }
 }
 
@@ -144,6 +160,6 @@ function promptPermission(host, level, params) {
       });
     }
 
-    prompts[id] = { resolve, reject };
+    openPrompt = { resolve, reject };
   });
 }

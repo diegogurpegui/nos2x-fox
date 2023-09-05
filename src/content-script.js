@@ -17,7 +17,6 @@ window.addEventListener('message', async message => {
   // pass on to background
   let response;
   try {
-    console.log('Calling nos2x-fox...');
     response = await browser.runtime.sendMessage({
       type: message.data.type,
       params: message.data.params,
