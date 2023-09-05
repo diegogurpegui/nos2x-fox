@@ -68,7 +68,7 @@ export enum AuthorizationCondition {
 }
 
 export type PromptParams = {
-  event: {
+  event?: {
     kind: number;
   };
 };

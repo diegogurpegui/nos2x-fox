@@ -1,5 +1,5 @@
 import browser from 'webextension-polyfill';
-import { render } from 'react-dom';
+import { createRoot } from 'react-dom/client';
 import React from 'react';
 
 import { getAllowedCapabilities } from './common';
@@ -15,19 +15,25 @@ function Prompt() {
   const id = queryString.get('id');
   const host = queryString.get('host');
   const level = parseInt(queryString.get('level') as string);
+
   let params: PromptParams | null = null;
   let kindName: string | null = null;
   let kind: number | null = null;
+
   try {
     params = JSON.parse(queryString.get('params') as string) as PromptParams;
     if (params) {
-      kind = params.event.kind;
-      kindName = getKindDescription(kind);
+      if (params.event) {
+        kind = params.event.kind;
+        kindName = getKindDescription(kind);
+      } else {
+        console.warn('params.event is not defined');
+      }
     } else {
       console.error('Param is null');
     }
   } catch (err) {
-    console.error('Error parsing params.');
+    console.error('Error parsing params.', err);
   }
 
   return (
@@ -48,22 +54,37 @@ function Prompt() {
         </ul>
       </div>
       <div className="prompt-action-buttons">
-        <button className="button" onClick={authorizeHandler(AuthorizationCondition.FOREVER)}>
+        <button
+          className="button"
+          onClick={authorizeHandler(AuthorizationCondition.FOREVER)}
+        >
           <ShieldCheckmarkIcon /> Authorize forever
         </button>
         <div className="button-group">
-          <button className="button" onClick={authorizeHandler(AuthorizationCondition.EXPIRABLE_5M)}>
+          <button
+            className="button"
+            onClick={authorizeHandler(AuthorizationCondition.EXPIRABLE_5M)}
+          >
             <TimerIcon />
             Authorize for 5 m
           </button>
-          <button className="button" onClick={authorizeHandler(AuthorizationCondition.EXPIRABLE_1H)}>
+          <button
+            className="button"
+            onClick={authorizeHandler(AuthorizationCondition.EXPIRABLE_1H)}
+          >
             1 h
           </button>
-          <button className="button" onClick={authorizeHandler(AuthorizationCondition.EXPIRABLE_8H)}>
+          <button
+            className="button"
+            onClick={authorizeHandler(AuthorizationCondition.EXPIRABLE_8H)}
+          >
             8 h
           </button>
         </div>
-        <button className="button button-success" onClick={authorizeHandler(AuthorizationCondition.SINGLE)}>
+        <button
+          className="button button-success"
+          onClick={authorizeHandler(AuthorizationCondition.SINGLE)}
+        >
           <CheckmarkCircleIcon />
           Authorize just this
         </button>
@@ -118,4 +139,5 @@ function Prompt() {
   }
 }
 
-render(<Prompt />, document.getElementById('main'));
+const root = createRoot(document.getElementById('main'));
+root.render(<Prompt />);
