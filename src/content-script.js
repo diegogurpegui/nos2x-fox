@@ -1,5 +1,7 @@
 import browser from 'webextension-polyfill';
 
+const EXTENSION_CODE = 'nos2x-fox';
+
 // inject the script that will provide window.nostr
 let script = document.createElement('script');
 script.setAttribute('async', 'false');
@@ -12,7 +14,7 @@ window.addEventListener('message', async message => {
   if (message.source !== window) return;
   if (!message.data) return;
   if (!message.data.params) return;
-  if (message.data.ext !== 'nos2x-fox') return;
+  if (message.data.ext !== EXTENSION_CODE) return;
 
   // pass on to background
   let response;
@@ -29,7 +31,7 @@ window.addEventListener('message', async message => {
 
   // return response
   window.postMessage(
-    { id: message.data.id, ext: 'nos2x-fox', response },
+    { id: message.data.id, ext: EXTENSION_CODE, response },
     message.origin
   );
 });

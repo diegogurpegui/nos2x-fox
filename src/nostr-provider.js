@@ -1,3 +1,5 @@
+const EXTENSION_CODE = 'nos2x-fox';
+
 window.nostr = {
   _requests: {},
   _pubkey: null,
@@ -49,7 +51,7 @@ window.nostr = {
       window.postMessage(
         {
           id,
-          ext: 'nos2x-fox',
+          ext: EXTENSION_CODE,
           type,
           params
         },
@@ -64,7 +66,7 @@ window.addEventListener('message', message => {
     !message.data ||
     message.data.response === null ||
     message.data.response === undefined ||
-    message.data.ext !== 'nos2x-fox' ||
+    message.data.ext !== EXTENSION_CODE ||
     !window.nostr._requests[message.data.id]
   )
     return;
@@ -72,7 +74,7 @@ window.addEventListener('message', message => {
   if (message.data.response.error) {
     const errorMessage =
       message.data.response.error.message ?? message.data.response.error;
-    let error = new Error('nos2x-fox: ' + errorMessage);
+    let error = new Error(`${EXTENSION_CODE}: ` + errorMessage);
     error.stack = message.data.response.error.stack;
     window.nostr._requests[message.data.id].reject(error);
   } else {
