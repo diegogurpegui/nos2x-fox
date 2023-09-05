@@ -64,7 +64,7 @@ window.addEventListener('message', message => {
     !message.data ||
     message.data.response === null ||
     message.data.response === undefined ||
-    message.data.ext !== 'nos2x' ||
+    message.data.ext !== 'nos2x-fox' ||
     !window.nostr._requests[message.data.id]
   )
     return;
