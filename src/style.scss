@@ -426,6 +426,7 @@ input,
           display: flex;
           flex-direction: row;
           margin-bottom: 0.5em;
+
           svg {
             max-height: 2em;
             align-self: center;
@@ -434,6 +435,10 @@ input,
           input {
             flex-grow: 1;
             margin-right: 0.5em;
+          }
+
+          .button-remove {
+            max-height: none;
           }
         }
       }

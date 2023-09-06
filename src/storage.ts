@@ -26,9 +26,14 @@ export async function readActiveRelays(): Promise<RelaysConfig> {
   return data[ConfigurationKeys.RELAYS];
 }
 export async function updateActiveRelays(relays) {
-  return browser.storage.local.set({
-    relays: relays
+  // Saving the active relays
+  await browser.storage.local.set({
+    [ConfigurationKeys.RELAYS]: relays
   });
+  // update the active profile
+  const profile = await getActiveProfile();
+  profile.relays = relays;
+  return updateProfile(profile);
 }
 
 export async function readActivePermissions(): Promise<PermissionConfig> {
@@ -109,4 +114,24 @@ export async function updateProfiles(
   });
 
   return profiles;
+}
+
+export async function updateProfile(
+  profile: ProfileConfig
+): Promise<ProfilesConfig> {
+  const profiles = await readProfiles();
+  profiles[getPublicKey(profile.privateKey)] = profile;
+
+  browser.storage.local.set({
+    [ConfigurationKeys.PROFILES]: profiles
+  });
+
+  return profiles;
+}
+
+export async function getActiveProfile(): Promise<ProfileConfig> {
+  const privateKey = await readActivePrivateKey();
+  const publicKey = getPublicKey(privateKey);
+  const profiles = await readProfiles();
+  return profiles[publicKey];
 }

@@ -18,6 +18,7 @@ import logotype from './assets/logo/logotype.png';
 import CopyIcon from './assets/icons/copy-outline.svg';
 import DiceIcon from './assets/icons/dice-outline.svg';
 import RadioIcon from './assets/icons/radio-outline.svg';
+import TrashIcon from './assets/icons/trash-outline.svg';
 
 // import manifest from './manifest.json';
 
@@ -99,7 +100,7 @@ function Options() {
    * When active public key changes
    */
   useEffect(() => {
-    loadProfile(activeProfilePubKey)
+    loadProfile(activeProfilePubKey);
   }, [activeProfilePubKey]);
 
   const showMessage = useCallback((msg, type = 'info', timeout = 3000) => {
@@ -325,6 +326,12 @@ function Options() {
     setNewRelayURL('');
   }
 
+  function handleRemoveRelayClick(event: React.MouseEvent<HTMLButtonElement>) {
+    const relayUrl = event.currentTarget.id;
+    const newRelays = relays.filter(relay => relay.url != relayUrl);
+    setRelays(newRelays);
+  }
+
   /**
    * Check if the URL is valid. If no URL is provided is taken from the state
    * @param url Url to check.
@@ -458,6 +465,14 @@ function Options() {
           <div className="relays-list">
             {relays.map(({ url, policy }, i) => (
               <div key={i} className="relays-list-item">
+                <button
+                  className="button-onlyicon button-remove"
+                  onClick={handleRemoveRelayClick}
+                  title="Remove"
+                  id={url}
+                >
+                  <TrashIcon />
+                </button>
                 <RadioIcon />
                 <input
                   value={url}
