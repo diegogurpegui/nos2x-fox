@@ -13,7 +13,7 @@ import {
   RelaysConfig
 } from './types';
 import * as Storage from './storage';
-import { getPermissionsString, isValidRelayURL } from './common';
+import { getPermissionsString, isHexadecimal, isValidRelayURL } from './common';
 import logotype from './assets/logo/logotype.png';
 import WarningIcon from './assets/icons/warning-outline.svg';
 import CopyIcon from './assets/icons/copy-outline.svg';
@@ -190,11 +190,13 @@ function Options() {
 
     let hexOrEmptyPrivKey = privateKey;
 
-    try {
-      let { type, data } = nip19.decode(privateKey);
-      if (type === 'nsec') hexOrEmptyPrivKey = data;
-    } catch (err) {
-      console.error('Converting key to hexa (decode NIP19)', err);
+    if (!isHexadecimal(privateKey)) {
+      try {
+        let { type, data } = nip19.decode(privateKey);
+        if (type === 'nsec') hexOrEmptyPrivKey = data;
+      } catch (err) {
+        console.error('Converting key to hexa (decode NIP19)', err);
+      }
     }
 
     if (hexOrEmptyPrivKey !== '') {

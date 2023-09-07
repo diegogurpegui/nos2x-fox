@@ -72,3 +72,7 @@ export function truncatePublicKeys(
 export function isValidRelayURL(url: string): boolean {
   return url != null && url.trim() != '' && url.startsWith('wss://');
 }
+
+export function isHexadecimal(value: string) {
+  return /[0-9A-Fa-f]+/g.test(value);
+}
