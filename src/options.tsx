@@ -20,15 +20,13 @@ import DiceIcon from './assets/icons/dice-outline.svg';
 import RadioIcon from './assets/icons/radio-outline.svg';
 import TrashIcon from './assets/icons/trash-outline.svg';
 
-// import manifest from './manifest.json';
-
 type RelayConfig = {
   url: string;
   policy: { read: boolean; write: boolean };
 };
 
 function Options() {
-  let [activeProfilePubKey, setActiveProfilePubKey] = useState<string>('');
+  let [selectedProfilePubKey, setSelectedProfilePubKey] = useState<string>('');
   let [profiles, setProfiles] = useState<ProfilesConfig>({});
   let [profileJson, setProfileJson] = useState('');
   let [isModalShown, setModalShown] = useState(false);
@@ -67,11 +65,12 @@ function Options() {
         // load active profile
         let activePubKey = Object.keys(profiles)[0];
         if (privateKey != '') {
+          // there is an active private key
           activePubKey = getPublicKey(privateKey);
-          console.log('From private key', activePubKey);
+          console.log(`Public key loaded from private key`);
         }
         console.log('Active pub key', activePubKey);
-        setActiveProfilePubKey(activePubKey);
+        setSelectedProfilePubKey(activePubKey);
       }
     });
   }, []);
@@ -100,8 +99,8 @@ function Options() {
    * When active public key changes
    */
   useEffect(() => {
-    loadProfile(activeProfilePubKey);
-  }, [activeProfilePubKey]);
+    loadProfile(selectedProfilePubKey);
+  }, [selectedProfilePubKey]);
 
   const showMessage = useCallback((msg, type = 'info', timeout = 3000) => {
     setMessageType(type);
@@ -122,14 +121,18 @@ function Options() {
     // setActiveProfilePubKey(pubKey);
     setRelays(convertRelaysToUIArray(profile.relays));
     setPermissions(convertPermissionsToUIObject(profile.permissions));
-    setPrivateKey(profile.privateKey);
+    if (profile.privateKey) {
+      setPrivateKey(nip19.nsecEncode(profile.privateKey));
+    } else {
+      setPrivateKey('');
+    }
 
     console.log(`The profile for pubkey '${pubKey}' was loaded.`);
   }
 
   function handleActiveProfileChange(event) {
     const pubKey = event.target.value;
-    setActiveProfilePubKey(pubKey);
+    setSelectedProfilePubKey(pubKey);
     // loadProfile(pubKey);
   }
 
@@ -138,7 +141,7 @@ function Options() {
       privateKey: ''
     };
     setProfiles({ ...profiles, ...{ ['']: newProfile } });
-    setActiveProfilePubKey('');
+    setSelectedProfilePubKey('');
 
     setRelays([]);
     setPermissions(null);
@@ -149,8 +152,12 @@ function Options() {
     return Object.keys(profiles).includes('');
   }
 
-  function getActiveProfile(): ProfileConfig {
-    return profiles[activeProfilePubKey];
+  function getActiveProfile(): ProfileConfig | null {
+    if (selectedProfilePubKey) {
+      return profiles[selectedProfilePubKey];
+    } else {
+      return null;
+    }
   }
 
   function handleExportProfileClick() {
@@ -179,30 +186,32 @@ function Options() {
   async function savePrivateKey() {
     if (!isKeyValid()) return;
 
-    let hexOrEmptyKey = privateKey;
+    let hexOrEmptyPrivKey = privateKey;
 
     try {
       let { type, data } = nip19.decode(privateKey);
-      if (type === 'nsec') hexOrEmptyKey = data;
+      if (type === 'nsec') hexOrEmptyPrivKey = data;
     } catch (err) {
       console.error('Converting key to hexa (decode NIP19)', err);
     }
 
-    await Storage.updateActivePrivateKey(hexOrEmptyKey);
+    if (hexOrEmptyPrivKey !== '') {
+      await Storage.updateActivePrivateKey(hexOrEmptyPrivKey);
 
-    if (hexOrEmptyKey !== '') {
-      const privKeyNip19 = nip19.nsecEncode(hexOrEmptyKey);
+      const privKeyNip19 = nip19.nsecEncode(hexOrEmptyPrivKey);
       setPrivateKey(privKeyNip19);
 
       // if new profile need to re-calculate pub key
-      const newPubKey = getPublicKey(hexOrEmptyKey);
-      profiles[newPubKey] = profiles[activeProfilePubKey];
-      profiles[newPubKey].privateKey = privKeyNip19;
-      delete profiles[activeProfilePubKey];
-      setActiveProfilePubKey(newPubKey);
+      const newPubKey = getPublicKey(hexOrEmptyPrivKey);
+      profiles[newPubKey] = profiles[selectedProfilePubKey];
+      profiles[newPubKey].privateKey = hexOrEmptyPrivKey; // save the hex version in the profile
+      delete profiles[selectedProfilePubKey];
+      setSelectedProfilePubKey(newPubKey);
       // loadProfile(newPubKey);
 
       saveProfiles();
+    } else {
+      console.warn('Saving and empty private key');
     }
 
     showMessage('Saved private key!', 'success');
@@ -279,15 +288,19 @@ function Options() {
   }
 
   const saveRelaysInStorage = useDebouncedCallback(async () => {
-    await Storage.updateActiveRelays(
-      Object.fromEntries(
-        relays
-          .filter(({ url }) => url.trim() !== '')
-          .map(({ url, policy }) => [url.trim(), policy])
-      )
-    );
+    if (privateKey) { // if there is a selected profile (private key)
+      let relaysToSave = {};
+      if (relays && relays.length) {
+        relaysToSave = Object.fromEntries(
+          relays
+            .filter(({ url }) => url.trim() !== '')
+            .map(({ url, policy }) => [url.trim(), policy])
+        );
+      }
+      await Storage.updateActiveRelays(relaysToSave);
 
-    showMessage('Saved relays!', 'success');
+      showMessage('Saved relays!', 'success');
+    }
   }, 700);
 
   function handleChangeRelayURL(i, ev) {
@@ -344,6 +357,16 @@ function Options() {
 
   //#endregion Relays
 
+  function handleClearStorageClick() {
+    if (
+      confirm('Are you sure you want to delete everything from this browser?')
+    ) {
+      Storage.clear();
+      // reload the page
+      window.location.reload();
+    }
+  }
+
   return (
     <>
       <header className="header">
@@ -362,7 +385,7 @@ function Options() {
             <label htmlFor="active-profile">Active profile:</label>
             <div className="select" id="active-profile">
               <select
-                value={activeProfilePubKey}
+                value={selectedProfilePubKey}
                 onChange={handleActiveProfileChange}
               >
                 {Object.keys(profiles).map(profilePubKey => (
@@ -395,7 +418,7 @@ function Options() {
                 id="private-key"
                 type={isKeyHidden ? 'password' : 'text'}
                 value={privateKey}
-                readOnly={activeProfilePubKey != ''}
+                readOnly={selectedProfilePubKey != ''}
                 onChange={handleKeyChange}
                 onFocus={() => setKeyHidden(false)}
                 onBlur={() => setKeyHidden(true)}
@@ -406,7 +429,7 @@ function Options() {
             </div>
           </div>
           <button
-            disabled={!isKeyValid() || activeProfilePubKey != ''}
+            disabled={!isKeyValid() || selectedProfilePubKey != ''}
             onClick={savePrivateKey}
           >
             Save key
@@ -508,6 +531,12 @@ function Options() {
               Add relay
             </button>
           </div>
+        </section>
+
+        <section className="danger">
+          <button className="button-danger" onClick={handleClearStorageClick}>
+            Delete configuration
+          </button>
         </section>
       </main>
       <footer>version {version}</footer>

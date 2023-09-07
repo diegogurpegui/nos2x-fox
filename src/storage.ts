@@ -15,7 +15,7 @@ export async function readActivePrivateKey(): Promise<string> {
   return data[ConfigurationKeys.PRIVATE_KEY];
 }
 export async function updateActivePrivateKey(privateKey: string) {
-  console.log('Setting new pubKey:', getPublicKey(privateKey));
+  console.log('Storing new active pubKey:', getPublicKey(privateKey));
   return browser.storage.local.set({
     [ConfigurationKeys.PRIVATE_KEY]: privateKey
   });
@@ -26,14 +26,16 @@ export async function readActiveRelays(): Promise<RelaysConfig> {
   return data[ConfigurationKeys.RELAYS];
 }
 export async function updateActiveRelays(relays) {
-  // Saving the active relays
-  await browser.storage.local.set({
-    [ConfigurationKeys.RELAYS]: relays
-  });
-  // update the active profile
-  const profile = await getActiveProfile();
-  profile.relays = relays;
-  return updateProfile(profile);
+  if (relays) {
+    // Saving the active relays
+    await browser.storage.local.set({
+      [ConfigurationKeys.RELAYS]: relays
+    });
+    // update the active profile
+    const profile = await getActiveProfile();
+    profile.relays = relays;
+    return updateProfile(profile);
+  }
 }
 
 export async function readActivePermissions(): Promise<PermissionConfig> {
@@ -131,7 +133,15 @@ export async function updateProfile(
 
 export async function getActiveProfile(): Promise<ProfileConfig> {
   const privateKey = await readActivePrivateKey();
-  const publicKey = getPublicKey(privateKey);
-  const profiles = await readProfiles();
-  return profiles[publicKey];
+  if (privateKey) {
+    const publicKey = getPublicKey(privateKey);
+    const profiles = await readProfiles();
+    return profiles[publicKey];
+  } else {
+    throw new Error('There is no active private key.');
+  }
+}
+
+export function clear(): void {
+  return browser.storage.local.clear();
 }
