@@ -15,6 +15,7 @@ import {
 import * as Storage from './storage';
 import { getPermissionsString, isValidRelayURL } from './common';
 import logotype from './assets/logo/logotype.png';
+import WarningIcon from './assets/icons/warning-outline.svg';
 import CopyIcon from './assets/icons/copy-outline.svg';
 import DiceIcon from './assets/icons/dice-outline.svg';
 import RadioIcon from './assets/icons/radio-outline.svg';
@@ -547,8 +548,13 @@ function Options() {
         </section>
 
         <section className="danger">
-          <button className="button-danger" onClick={handleClearStorageClick}>
+          <button
+            className="button button-danger"
+            onClick={handleClearStorageClick}
+          >
+            <WarningIcon />
             Delete configuration
+            <WarningIcon />
           </button>
         </section>
       </main>
