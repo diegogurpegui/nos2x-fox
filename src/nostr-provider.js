@@ -31,7 +31,7 @@ window.nostr = {
   _call(type, params) {
     let id = Math.random().toString().slice(-4);
     console.log(
-      '%c[nos2x:%c' +
+      '%c[nos2x-fox:%c' +
         id +
         '%c]%c calling %c' +
         type +
@@ -82,7 +82,7 @@ window.addEventListener('message', message => {
   }
 
   console.log(
-    '%c[nos2x:%c' +
+    '%c[nos2x-fox:%c' +
       message.data.id +
       '%c]%c result: %c' +
       JSON.stringify(
