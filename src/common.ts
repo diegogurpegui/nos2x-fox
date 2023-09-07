@@ -63,3 +63,12 @@ export function truncatePublicKeys(
     publicKey.length - endCount
   )}`;
 }
+
+/**
+ * Checks wether the URL is valid
+ * @param url Relay websocket URL
+ * @returns {boolean}
+ */
+export function isValidRelayURL(url: string): boolean {
+  return url != null && url.trim() != '' && url.startsWith('wss://');
+}

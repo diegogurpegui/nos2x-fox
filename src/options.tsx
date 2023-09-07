@@ -13,7 +13,7 @@ import {
   RelaysConfig
 } from './types';
 import * as Storage from './storage';
-import { getPermissionsString } from './common';
+import { getPermissionsString, isValidRelayURL } from './common';
 import logotype from './assets/logo/logotype.png';
 import CopyIcon from './assets/icons/copy-outline.svg';
 import DiceIcon from './assets/icons/dice-outline.svg';
@@ -35,6 +35,7 @@ function Options() {
   let [isKeyHidden, setKeyHidden] = useState(true);
   let [relays, setRelays] = useState([]);
   let [newRelayURL, setNewRelayURL] = useState('');
+  let [isNewRelayURLValid, setNewRelayURLValid] = useState(true);
   let [permissions, setPermissions] = useState();
   let [message, setMessage] = useState('');
   let [messageType, setMessageType] = useState('info');
@@ -288,7 +289,8 @@ function Options() {
   }
 
   const saveRelaysInStorage = useDebouncedCallback(async () => {
-    if (privateKey) { // if there is a selected profile (private key)
+    if (privateKey) {
+      // if there is a selected profile (private key)
       let relaysToSave = {};
       if (relays && relays.length) {
         relaysToSave = Object.fromEntries(
@@ -324,11 +326,17 @@ function Options() {
 
   function handleNewRelayURLChange(e) {
     setNewRelayURL(e.target.value);
+    if (!isRelayURLValid(e.target.value)) {
+      setNewRelayURLValid(false);
+    }
   }
 
   function handleAddRelayClick() {
-    if (!isRelayURLValid()) return;
+    if (!isRelayURLValid()) {
+      return;
+    }
 
+    setNewRelayURLValid(true);
     setRelays([
       ...relays,
       {
@@ -352,7 +360,7 @@ function Options() {
    */
   function isRelayURLValid(url?: string) {
     const urlToCheck = url ? url : newRelayURL;
-    return urlToCheck != null && urlToCheck.trim() != '';
+    return isValidRelayURL(urlToCheck);
   }
 
   //#endregion Relays
@@ -520,10 +528,15 @@ function Options() {
               </div>
             ))}
           </div>
-          <div className="form-field">
+          <div
+            className={`form-field ${
+              !isNewRelayURLValid ? 'validation-error' : ''
+            }`}
+          >
             <label htmlFor="new-relay-url">New relay URL:</label>
             <input
               id="new-relay-url"
+              placeholder="wss://..."
               value={newRelayURL}
               onChange={handleNewRelayURLChange}
             />

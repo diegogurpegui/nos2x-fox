@@ -314,6 +314,15 @@ input,
   & > * {
     margin-bottom: 0.5em;
   }
+
+  &.validation-error {
+    label {
+      color: $color-danger;
+    }
+    input {
+      border-color: $color-danger;
+    }
+  }
 }
 
 .input-group {
