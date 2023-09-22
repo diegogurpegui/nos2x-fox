@@ -190,13 +190,11 @@ function Options() {
 
     let hexOrEmptyPrivKey = privateKey;
 
-    if (!isHexadecimal(privateKey)) {
-      try {
-        let { type, data } = nip19.decode(privateKey);
-        if (type === 'nsec') hexOrEmptyPrivKey = data;
-      } catch (err) {
-        console.error('Converting key to hexa (decode NIP19)', err);
-      }
+    try {
+      let { type, data } = nip19.decode(privateKey);
+      if (type === 'nsec') hexOrEmptyPrivKey = data;
+    } catch (err) {
+      console.error('Converting key to hexa (decode NIP19)', err);
     }
 
     if (hexOrEmptyPrivKey !== '') {
@@ -226,8 +224,9 @@ function Options() {
     if (privateKey.match(/^[a-f0-9]{64}$/)) return true;
     try {
       if (nip19.decode(privateKey).type === 'nsec') return true;
-    } catch (_) {}
-    console.log('bad');
+    } catch (e) {
+      console.error(`Error decoding NIP19 key: ${e}`);
+    }
     return false;
   }
 
