@@ -1,5 +1,7 @@
 ![](src/assets/logo/logotype.png)
-# nos2x-fox (nos2x for Forefox)
+
+# nos2x-fox (nos2x for Firefox)
+
 notes and other stuff signed by an extension
 
 This is a fork from https://github.com/fiatjaf/nos2x focused on Firefox and related browsers.
@@ -20,8 +22,8 @@ async window.nostr.nip04.decrypt(pubkey, ciphertext): string // takes ciphertext
 
 ## Install
 
-* By yourself from file: look into [Releases](https://github.com/diegogurpegui/nos2x-fox/releases)
-* From the site [Firefox Add-on](https://addons.mozilla.org/en-US/firefox/addon/nos2x-fox/)
+- By yourself from file: look into [Releases](https://github.com/diegogurpegui/nos2x-fox/releases)
+- From the site [Firefox Add-on](https://addons.mozilla.org/en-US/firefox/addon/nos2x-fox/)
 
 ## Develop
 
@@ -35,12 +37,12 @@ $ yarn run build
 ```
 
 After you build the extension, follow these steps:
+
 1. Open Firefox
 2. Go to about:debugging
 3. Click on "This Firefox" on the left
 4. Click on "Load Temporary Add-on..."
 5. Select any file from the `dist/` folder of the extension
-
 
 ## Screenshots
 
