@@ -12,7 +12,7 @@
     "watch": "ag -l --js | entr ./build.js",
     "package:src": "cd src; zip -r nos2x-fox__src *; cd ..; mv src/nos2x-fox__src.zip ./",
     "package": "yarn run build; cd dist; zip -r archive *; cd ..; mv dist/archive.zip ./nos2x-fox.xpi",
-    "package:hosted": "yarn run build-hosted; cd dist; zip -r archive *; cd ..; mv dist/archive.zip ./nos2x-fox_hosted.xpi"
+    "package:hosted": "yarn run build:hosted; cd dist; zip -r archive *; cd ..; mv dist/archive.zip ./nos2x-fox_hosted.xpi"
   },
   "dependencies": {
     "date-fns": "^2.29.3",
