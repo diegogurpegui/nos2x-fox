@@ -1,7 +1,7 @@
 {
   "name": "nos2x-fox",
   "description": "Nostr Signer Extension (for Firefox)",
-  "version": "1.12.0",
+  "version": "1.12.1",
   "repository": {
     "url": "https://github.com/diegogurpegui/nos2x-fox",
     "type": "github"
