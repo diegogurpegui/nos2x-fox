@@ -226,8 +226,9 @@ function Options() {
     if (privateKey.match(/^[a-f0-9]{64}$/)) return true;
     try {
       if (nip19.decode(privateKey).type === 'nsec') return true;
-    } catch (_) {}
-    console.log('bad');
+    } catch (err) {
+      console.error(`Error decoding NIP19 key: ${err}`);
+    }
     return false;
   }
 

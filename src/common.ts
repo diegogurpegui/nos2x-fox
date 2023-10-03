@@ -74,5 +74,5 @@ export function isValidRelayURL(url: string): boolean {
 }
 
 export function isHexadecimal(value: string) {
-  return /[0-9A-Fa-f]+/g.test(value);
+  return /^[0-9A-Fa-f]+$/g.test(value);
 }
