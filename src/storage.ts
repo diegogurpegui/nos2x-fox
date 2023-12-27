@@ -28,6 +28,10 @@ export async function readActiveRelays(): Promise<RelaysConfig> {
 export async function updateRelays(profilePublicKey: string, newRelays) {
   if (newRelays) {
     const profile = await getProfile(profilePublicKey);
+    if (!profile) {
+      console.warn(`There is no profile with the key '${profilePublicKey}'`);
+      return;
+    }
     profile.relays = newRelays;
     return updateProfile(profile);
   }
@@ -130,7 +134,19 @@ export async function getProfile(publicKey: string): Promise<ProfileConfig> {
 export async function updateProfiles(
   profiles: ProfilesConfig
 ): Promise<ProfilesConfig> {
-  browser.storage.local.set({
+  await browser.storage.local.set({
+    [ConfigurationKeys.PROFILES]: profiles
+  });
+
+  return profiles;
+}
+export async function addProfile(
+  profile: ProfileConfig
+): Promise<ProfilesConfig> {
+  const profiles = await readProfiles();
+  profiles[getPublicKey(profile.privateKey)] = profile;
+
+  await browser.storage.local.set({
     [ConfigurationKeys.PROFILES]: profiles
   });
 
@@ -142,7 +158,7 @@ export async function updateProfile(
   const profiles = await readProfiles();
   profiles[getPublicKey(profile.privateKey)] = profile;
 
-  browser.storage.local.set({
+  await browser.storage.local.set({
     [ConfigurationKeys.PROFILES]: profiles
   });
 

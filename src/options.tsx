@@ -15,11 +15,14 @@ import {
 import * as Storage from './storage';
 import { getPermissionsString, isHexadecimal, isValidRelayURL } from './common';
 import logotype from './assets/logo/logotype.png';
-import WarningIcon from './assets/icons/warning-outline.svg';
+import AddCircleIcon from './assets/icons/add-circle-outline.svg';
+import ArrowUpCircleIcon from './assets/icons/arrow-up-circle-outline.svg';
 import CopyIcon from './assets/icons/copy-outline.svg';
 import DiceIcon from './assets/icons/dice-outline.svg';
+import DownloadIcon from './assets/icons/download-outline.svg';
 import RadioIcon from './assets/icons/radio-outline.svg';
 import TrashIcon from './assets/icons/trash-outline.svg';
+import WarningIcon from './assets/icons/warning-outline.svg';
 
 type RelayConfig = {
   url: string;
@@ -30,8 +33,10 @@ function Options() {
   let [selectedProfilePubKey, setSelectedProfilePubKey] = useState<string>('');
   let [profiles, setProfiles] = useState<ProfilesConfig>({});
   let [isLoadingProfile, setLoadingProfile] = useState(false);
-  let [profileJson, setProfileJson] = useState('');
-  let [isModalShown, setModalShown] = useState(false);
+  let [profileExportJson, setProfileExportJson] = useState('');
+  let [profileImportJson, setProfileImportJson] = useState('');
+  let [isExportModalShown, setExportModalShown] = useState(false);
+  let [isImportModalShown, setImportModalShown] = useState(false);
 
   let [privateKey, setPrivateKey] = useState('');
   let [isKeyHidden, setKeyHidden] = useState(true);
@@ -94,7 +99,11 @@ function Options() {
     loadAndSelectProfile(selectedProfilePubKey);
   }, [selectedProfilePubKey]);
 
-  const showMessage = useCallback((msg, type = 'info', timeout = 3000) => {
+  const showMessage: (
+    msg: string,
+    type?: 'info' | 'success' | 'warning',
+    timeout?: number
+  ) => {} = useCallback((msg, type = 'info', timeout = 3000) => {
     setMessageType(type);
     setMessage(msg);
     if (timeout > 0) {
@@ -160,20 +169,82 @@ function Options() {
   function handleExportProfileClick() {
     const profile = getSelectedProfile();
     const profileJson = JSON.stringify(profile);
-    setProfileJson(profileJson);
-    setModalShown(true);
+    setProfileExportJson(profileJson);
+    setExportModalShown(true);
   }
 
   function handleExportProfileCopyClick() {
-    navigator.clipboard.writeText(profileJson);
+    navigator.clipboard.writeText(profileExportJson);
   }
 
-  function handleModalClose() {
-    setModalShown(false);
+  function handleExportModalClose() {
+    setExportModalShown(false);
   }
 
-  function saveProfiles() {
-    Storage.updateProfiles(profiles);
+  function handleImportProfileClick() {
+    setImportModalShown(true);
+  }
+
+  function handleChangeProfileImportJson(e) {
+    setProfileImportJson(e.target.value);
+  }
+
+  async function handleImportProfileImportClick() {
+    let newProfile: ProfileConfig;
+    // validations
+    try {
+      newProfile = JSON.parse(profileImportJson);
+    } catch (error) {
+      console.warn(`Error parsing the entered JSON`, error);
+      showMessage(
+        `There was an error parsing the JSON. ${error.message}`,
+        'warning'
+      );
+      return;
+    }
+    if (!newProfile) {
+      console.warn(`The imported profile is empty.`);
+      showMessage(`The imported profile is invalid.`, 'warning');
+    }
+
+    // store the new profile
+    await Storage.addProfile(newProfile);
+
+    const newPubKey = getPublicKey(newProfile.privateKey);
+    setProfiles({ ...profiles, ...{ [newPubKey]: newProfile } });
+
+    // now load in the component
+    if (newProfile.privateKey) {
+      setPrivateKey(nip19.nsecEncode(newProfile.privateKey));
+    } else {
+      setPrivateKey('');
+    }
+    setSelectedProfilePubKey(newPubKey);
+
+    setImportModalShown(false);
+  }
+
+  function handleImportModalClose() {
+    setImportModalShown(false);
+  }
+
+  async function handleDeleteProfileClick(e) {
+    e.preventDefault();
+    if (
+      window.confirm(
+        `Delete the profile "${nip19.npubEncode(selectedProfilePubKey)}"?`
+      )
+    ) {
+      const updateProfiles = profiles;
+      delete updateProfiles[selectedProfilePubKey];
+      console.debug('updated profiles', updateProfiles);
+      setProfiles(updateProfiles);
+      await saveProfiles();
+    }
+  }
+
+  async function saveProfiles() {
+    await Storage.updateProfiles(profiles);
   }
 
   //#endregion Profiles
@@ -205,7 +276,7 @@ function Options() {
       delete profiles[selectedProfilePubKey];
       setSelectedProfilePubKey(newPubKey); // this re-loads the profile in the screen
 
-      saveProfiles();
+      await saveProfiles();
     } else {
       console.warn('Saving and empty private key');
     }
@@ -403,9 +474,24 @@ function Options() {
               disabled={isNewProfilePending()}
               onClick={handleNewProfileClick}
             >
+              <AddCircleIcon />
               New profile
             </button>
-            <button onClick={handleExportProfileClick}>Export profile</button>
+            <button onClick={handleExportProfileClick}>
+              <DownloadIcon />
+              Export profile
+            </button>
+            <button onClick={handleImportProfileClick}>
+              <ArrowUpCircleIcon />
+              Import profile
+            </button>
+            <button
+              onClick={handleDeleteProfileClick}
+              className="button button-danger"
+            >
+              <TrashIcon />
+              Delete profile
+            </button>
           </div>
         </section>
 
@@ -551,15 +637,32 @@ function Options() {
       </main>
       <footer>version {version}</footer>
 
-      <Modal show={isModalShown} onClose={handleModalClose}>
+      <Modal
+        show={isExportModalShown}
+        className="export-modal"
+        onClose={handleExportModalClose}
+      >
         <p>
           This is the JSON that represents your profile (WARNING: it contains
           your private key):
         </p>
-        <code>{profileJson}</code>
+        <code>{profileExportJson}</code>
         <button onClick={handleExportProfileCopyClick}>
           <CopyIcon /> Copy
         </button>
+      </Modal>
+
+      <Modal
+        show={isImportModalShown}
+        className="import-modal"
+        onClose={handleImportModalClose}
+      >
+        <p>Paste the profile JSON in the following box:</p>
+        <textarea
+          value={profileImportJson}
+          onChange={handleChangeProfileImportJson}
+        ></textarea>
+        <button onClick={handleImportProfileImportClick}>Import</button>
       </Modal>
     </>
   );

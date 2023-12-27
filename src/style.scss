@@ -467,9 +467,19 @@ input,
 
   .modal {
     max-width: 95%;
+  }
+  .export-modal {
     code {
       display: block;
       overflow: scroll;
+    }
+  }
+  .import-modal {
+    textarea {
+      display: block;
+      width: 100%;
+      overflow: scroll;
+      font-family: 'Courier New', Courier, monospace;
     }
   }
 }

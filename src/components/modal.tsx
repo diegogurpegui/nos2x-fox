@@ -3,12 +3,14 @@ import React, { useRef, useEffect, useState } from 'react';
 
 interface ModalProps {
   show: boolean;
+  className?: string;
   onClose: () => {};
 }
 
 export function Modal({
   show,
   onClose,
+  className,
   children
 }: React.PropsWithChildren<ModalProps>) {
   const modalRef = useRef<HTMLDivElement>(null);
@@ -34,7 +36,7 @@ export function Modal({
   // }, [show]);
 
   return show ? (
-    <div className={`modal-wrapper`} ref={modalRef}>
+    <div className={`modal-wrapper ${className}`} ref={modalRef}>
       <div className={`modal`}>{children}</div>
       <div className="overlay" onClick={handleOverlayClick}></div>
     </div>
