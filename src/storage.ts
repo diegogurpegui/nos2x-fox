@@ -22,25 +22,25 @@ export async function updateActivePrivateKey(privateKey: string) {
 }
 
 export async function readActiveRelays(): Promise<RelaysConfig> {
-  const data = await browser.storage.local.get(ConfigurationKeys.RELAYS);
-  return data[ConfigurationKeys.RELAYS];
+  const activeProfile = await getActiveProfile();
+  return activeProfile.relays || {};
 }
-export async function updateActiveRelays(relays) {
-  if (relays) {
-    // Saving the active relays
-    await browser.storage.local.set({
-      [ConfigurationKeys.RELAYS]: relays
-    });
-    // update the active profile
-    const profile = await getActiveProfile();
-    profile.relays = relays;
+export async function updateRelays(profilePublicKey: string, newRelays) {
+  if (newRelays) {
+    const profile = await getProfile(profilePublicKey);
+    profile.relays = newRelays;
     return updateProfile(profile);
   }
 }
 
 export async function readActivePermissions(): Promise<PermissionConfig> {
-  let { permissions = {} }: { permissions: PermissionConfig } =
-    await browser.storage.local.get(ConfigurationKeys.PERMISSIONS);
+  const activeProfile = await getActiveProfile();
+
+  let permissions = activeProfile.permissions;
+  // if no permissions defined, return empty
+  if (!permissions) {
+    return {};
+  }
 
   // delete expired
   var needsUpdate = false;
@@ -57,28 +57,44 @@ export async function readActivePermissions(): Promise<PermissionConfig> {
       needsUpdate = true;
     }
   }
-  if (needsUpdate) browser.storage.local.set({ permissions });
+  if (needsUpdate) {
+    activeProfile.permissions = permissions;
+    await updateProfile(activeProfile);
+  }
 
   return permissions;
 }
-export async function updateActivePermission(host: string, permission) {
-  const storedPermissions = (await readActivePermissions()) || {};
+export async function addActivePermission(
+  host: string,
+  permission: PermissionConfig[string]
+) {
+  let storedPermissions = await readActivePermissions();
 
-  browser.storage.local.set({
-    permissions: {
-      ...storedPermissions,
-      [host]: {
-        ...permission,
-        created_at: Math.round(Date.now() / 1000)
-      }
+  storedPermissions = {
+    ...storedPermissions,
+    [host]: {
+      ...permission,
+      created_at: Math.round(Date.now() / 1000)
     }
-  });
+  };
+
+  // update the active profile
+  const profile = await getActiveProfile();
+  profile.permissions = storedPermissions;
+  return updateProfile(profile);
 }
-export async function removeActivePermissions(host: string) {
-  let { permissions = {} }: { permissions: PermissionConfig } =
-    await browser.storage.local.get(ConfigurationKeys.PERMISSIONS);
-  delete permissions[host];
-  browser.storage.local.set({ permissions });
+export async function removePermissions(
+  profilePublicKey: string,
+  host: string
+) {
+  const profile = await getProfile(profilePublicKey);
+  let permissions = profile.permissions;
+  if (permissions) {
+    delete permissions[host];
+  }
+  // update the profile
+  profile.permissions = permissions;
+  return updateProfile(profile);
 }
 
 export async function readProfiles(): Promise<ProfilesConfig> {
@@ -107,7 +123,10 @@ export async function readProfiles(): Promise<ProfilesConfig> {
 
   return profiles;
 }
-
+export async function getProfile(publicKey: string): Promise<ProfileConfig> {
+  const profiles = await readProfiles();
+  return profiles[publicKey];
+}
 export async function updateProfiles(
   profiles: ProfilesConfig
 ): Promise<ProfilesConfig> {
@@ -117,7 +136,6 @@ export async function updateProfiles(
 
   return profiles;
 }
-
 export async function updateProfile(
   profile: ProfileConfig
 ): Promise<ProfilesConfig> {
@@ -130,7 +148,6 @@ export async function updateProfile(
 
   return profiles;
 }
-
 export async function getActiveProfile(): Promise<ProfileConfig> {
   const privateKey = await readActivePrivateKey();
   if (privateKey) {
@@ -142,6 +159,24 @@ export async function getActiveProfile(): Promise<ProfileConfig> {
   }
 }
 
-export function clear(): void {
-  return browser.storage.local.clear();
+/**
+ * Clear the entire configuration
+ * @returns
+ */
+export async function empty(): Promise<void> {
+  return await browser.storage.local.clear();
 }
+
+async function clearUnused(): Promise<void> {
+  return await browser.storage.local.remove([
+    'relays', // no longer used
+    'permissions' // no longer used
+  ]);
+}
+
+// clear unused
+clearUnused()
+  .then(() => console.debug('Storage cleared from unused.'))
+  .catch(error =>
+    console.warn('There was a problem clearing the storage from unused.', error)
+  );

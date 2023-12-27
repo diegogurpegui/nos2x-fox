@@ -29,6 +29,7 @@ type RelayConfig = {
 function Options() {
   let [selectedProfilePubKey, setSelectedProfilePubKey] = useState<string>('');
   let [profiles, setProfiles] = useState<ProfilesConfig>({});
+  let [isLoadingProfile, setLoadingProfile] = useState(false);
   let [profileJson, setProfileJson] = useState('');
   let [isModalShown, setModalShown] = useState(false);
 
@@ -47,32 +48,21 @@ function Options() {
    * Load options from Storage
    */
   useEffect(() => {
-    Storage.readActivePrivateKey().then(privateKey => {
-      if (privateKey) {
-        setPrivateKey(nip19.nsecEncode(privateKey));
-      }
-    });
-
-    Storage.readActiveRelays().then(relays => {
-      if (relays) {
-        let relaysList = convertRelaysToUIArray(relays);
-        setRelays(relaysList);
-      }
-    });
-
     Storage.readProfiles().then(profiles => {
       if (profiles) {
         setProfiles(profiles);
 
-        // load active profile
-        let activePubKey = Object.keys(profiles)[0];
-        if (privateKey != '') {
-          // there is an active private key
-          activePubKey = getPublicKey(privateKey);
-          console.log(`Public key loaded from private key`);
+        // load selected profile
+        let selectedPubKey = Object.keys(profiles)[0];
+        if (selectedProfilePubKey != '') {
+          // there is an selected public key
+          selectedPubKey = selectedProfilePubKey;
+          console.debug(`Already selected public key`);
         }
-        console.log('Active pub key', activePubKey);
-        setSelectedProfilePubKey(activePubKey);
+
+        console.debug('Selected pub key to be loaded', selectedPubKey);
+        // this call will load the profile in the screen
+        setSelectedProfilePubKey(selectedPubKey);
       }
     });
   }, []);
@@ -81,8 +71,6 @@ function Options() {
    * Initialization
    */
   useEffect(() => {
-    loadPermissions();
-
     fetch('./manifest.json')
       .then(response => response.json())
       .then(json => setVersion(json.version));
@@ -92,16 +80,18 @@ function Options() {
    * When relays are updated
    */
   useEffect(() => {
+    if (isLoadingProfile) return;
+
     saveRelaysInStorage()
       ?.then(() => console.log('Relays stored.'))
       .catch(err => console.error('Error storing relays', err));
   }, [relays]);
 
   /**
-   * When active public key changes
+   * When selected public key changes
    */
   useEffect(() => {
-    loadProfile(selectedProfilePubKey);
+    loadAndSelectProfile(selectedProfilePubKey);
   }, [selectedProfilePubKey]);
 
   const showMessage = useCallback((msg, type = 'info', timeout = 3000) => {
@@ -114,13 +104,13 @@ function Options() {
 
   //#region Profiles
 
-  function loadProfile(pubKey: string) {
+  function loadAndSelectProfile(pubKey: string) {
     const profile: ProfileConfig = profiles[pubKey];
     if (!profile) {
       console.warn(`The profile for pubkey '${pubKey}' does not exist.`);
       return;
     }
-    // setActiveProfilePubKey(pubKey);
+    setLoadingProfile(true);
     setRelays(convertRelaysToUIArray(profile.relays));
     setPermissions(convertPermissionsToUIObject(profile.permissions));
     if (profile.privateKey) {
@@ -129,10 +119,15 @@ function Options() {
       setPrivateKey('');
     }
 
+    setLoadingProfile(false);
     console.log(`The profile for pubkey '${pubKey}' was loaded.`);
   }
 
-  function handleActiveProfileChange(event) {
+  function reloadSelectedProfile() {
+    loadAndSelectProfile(selectedProfilePubKey);
+  }
+
+  function handleSelectedProfileChange(event) {
     const pubKey = event.target.value;
     setSelectedProfilePubKey(pubKey);
     // loadProfile(pubKey);
@@ -154,7 +149,7 @@ function Options() {
     return Object.keys(profiles).includes('');
   }
 
-  function getActiveProfile(): ProfileConfig | null {
+  function getSelectedProfile(): ProfileConfig | null {
     if (selectedProfilePubKey) {
       return profiles[selectedProfilePubKey];
     } else {
@@ -163,7 +158,7 @@ function Options() {
   }
 
   function handleExportProfileClick() {
-    const profile = getActiveProfile();
+    const profile = getSelectedProfile();
     const profileJson = JSON.stringify(profile);
     setProfileJson(profileJson);
     setModalShown(true);
@@ -200,8 +195,6 @@ function Options() {
     }
 
     if (hexOrEmptyPrivKey !== '') {
-      await Storage.updateActivePrivateKey(hexOrEmptyPrivKey);
-
       const privKeyNip19 = nip19.nsecEncode(hexOrEmptyPrivKey);
       setPrivateKey(privKeyNip19);
 
@@ -210,8 +203,7 @@ function Options() {
       profiles[newPubKey] = profiles[selectedProfilePubKey];
       profiles[newPubKey].privateKey = hexOrEmptyPrivKey; // save the hex version in the profile
       delete profiles[selectedProfilePubKey];
-      setSelectedProfilePubKey(newPubKey);
-      // loadProfile(newPubKey);
+      setSelectedProfilePubKey(newPubKey); // this re-loads the profile in the screen
 
       saveProfiles();
     } else {
@@ -232,7 +224,7 @@ function Options() {
     return false;
   }
 
-  async function handleKeyChange(e) {
+  async function handlePrivateKeyChange(e) {
     let key = e.target.value.toLowerCase().trim();
     setPrivateKey(key);
   }
@@ -246,6 +238,7 @@ function Options() {
   //#region Permissions
 
   function convertPermissionsToUIObject(permissions?: PermissionConfig) {
+    console.debug('Converting permissions to UI', permissions);
     if (!permissions) return undefined;
 
     return Object.entries(permissions).map(
@@ -262,16 +255,10 @@ function Options() {
     e.preventDefault();
     let host = e.target.dataset.domain;
     if (window.confirm(`Revoke all permissions from ${host}?`)) {
-      await Storage.removeActivePermissions(host);
+      await Storage.removePermissions(selectedProfilePubKey, host);
       showMessage(`Removed permissions from ${host}`);
-      loadPermissions();
+      reloadSelectedProfile();
     }
-  }
-
-  function loadPermissions() {
-    Storage.readActivePermissions().then(permissions => {
-      setPermissions(convertPermissionsToUIObject(permissions));
-    });
   }
 
   //#endregion Permissions
@@ -293,8 +280,8 @@ function Options() {
   }
 
   const saveRelaysInStorage = useDebouncedCallback(async () => {
-    if (privateKey) {
-      // if there is a selected profile (private key)
+    // if there is a selected profile
+    if (selectedProfilePubKey) {
       let relaysToSave = {};
       if (relays && relays.length) {
         relaysToSave = Object.fromEntries(
@@ -303,7 +290,8 @@ function Options() {
             .map(({ url, policy }) => [url.trim(), policy])
         );
       }
-      await Storage.updateActiveRelays(relaysToSave);
+      console.debug('Relays to save', relaysToSave);
+      await Storage.updateRelays(selectedProfilePubKey, relaysToSave);
 
       showMessage('Saved relays!', 'success');
     }
@@ -369,11 +357,11 @@ function Options() {
 
   //#endregion Relays
 
-  function handleClearStorageClick() {
+  async function handleClearStorageClick() {
     if (
       confirm('Are you sure you want to delete everything from this browser?')
     ) {
-      Storage.clear();
+      await Storage.empty();
       // reload the page
       window.location.reload();
     }
@@ -394,11 +382,11 @@ function Options() {
         <section>
           <h3>Profile</h3>
           <div className="form-field">
-            <label htmlFor="active-profile">Active profile:</label>
-            <div className="select" id="active-profile">
+            <label htmlFor="selected-profile">Selected profile:</label>
+            <div className="select" id="selected-profile">
               <select
                 value={selectedProfilePubKey}
-                onChange={handleActiveProfileChange}
+                onChange={handleSelectedProfileChange}
               >
                 {Object.keys(profiles).map(profilePubKey => (
                   <option value={profilePubKey} key={profilePubKey}>
@@ -431,7 +419,7 @@ function Options() {
                 type={isKeyHidden ? 'password' : 'text'}
                 value={privateKey}
                 readOnly={selectedProfilePubKey != ''}
-                onChange={handleKeyChange}
+                onChange={handlePrivateKeyChange}
                 onFocus={() => setKeyHidden(false)}
                 onBlur={() => setKeyHidden(true)}
               />

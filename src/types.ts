@@ -29,8 +29,6 @@ export const KindNames = {
 
 export enum ConfigurationKeys {
   PRIVATE_KEY = 'private_key',
-  RELAYS = 'relays',
-  PERMISSIONS = 'permissions',
   PROFILES = 'profiles'
 }
 

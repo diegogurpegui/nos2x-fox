@@ -104,7 +104,7 @@ function handlePromptMessage({ id, condition, host, level }, sender) {
       case AuthorizationCondition.EXPIRABLE_1H:
       case AuthorizationCondition.EXPIRABLE_8H:
         openPrompt?.resolve?.(true);
-        Storage.updateActivePermission(host, {
+        Storage.addActivePermission(host, {
           level,
           condition
         });
