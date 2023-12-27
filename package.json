@@ -12,7 +12,8 @@
     "watch": "ag -l --js | entr ./build.js",
     "package:src": "cd src; zip -r nos2x-fox__src *; cd ..; mv src/nos2x-fox__src.zip ./",
     "package": "yarn run build; cd dist; zip -r archive *; cd ..; mv dist/archive.zip ./nos2x-fox.xpi",
-    "package:hosted": "yarn run build:hosted; cd dist; zip -r archive *; cd ..; mv dist/archive.zip ./nos2x-fox_hosted.xpi"
+    "package:hosted": "yarn run build:hosted; cd dist; zip -r archive *; cd ..; mv dist/archive.zip ./nos2x-fox_hosted.xpi",
+    "start:firefox": "web-ext run --source-dir ./dist/"
   },
   "dependencies": {
     "date-fns": "^2.29.3",
@@ -34,6 +35,7 @@
     "eslint-plugin-babel": "^5.3.1",
     "eslint-plugin-react": "^7.28.0",
     "prettier": "^3.0.3",
-    "sass": "^1.58.3"
+    "sass": "^1.58.3",
+    "web-ext": "^7.9.0"
   }
 }
