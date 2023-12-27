@@ -235,11 +235,13 @@ function Options() {
         `Delete the profile "${nip19.npubEncode(selectedProfilePubKey)}"?`
       )
     ) {
+      // delete from storage
+      await Storage.deleteProfile(selectedProfilePubKey);
+      // now update component
       const updateProfiles = profiles;
       delete updateProfiles[selectedProfilePubKey];
       console.debug('updated profiles', updateProfiles);
       setProfiles(updateProfiles);
-      await saveProfiles();
     }
   }
 

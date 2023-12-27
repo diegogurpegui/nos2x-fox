@@ -15,7 +15,12 @@ export async function readActivePrivateKey(): Promise<string> {
   return data[ConfigurationKeys.PRIVATE_KEY];
 }
 export async function updateActivePrivateKey(privateKey: string) {
-  console.log('Storing new active pubKey:', getPublicKey(privateKey));
+  if (privateKey == null || privateKey == '') {
+    console.log('Removing active profile (private key)');
+  } else {
+    console.log('Storing new active pubKey:', getPublicKey(privateKey));
+  }
+
   return browser.storage.local.set({
     [ConfigurationKeys.PRIVATE_KEY]: privateKey
   });
@@ -150,6 +155,12 @@ export async function addProfile(
     [ConfigurationKeys.PROFILES]: profiles
   });
 
+  // if it's the first profile to be added, then set it as the active one
+  const activePrivateKey = await readActivePrivateKey();
+  if (!activePrivateKey && Object.keys(profiles).length == 1) {
+    await updateActivePrivateKey(profile.privateKey);
+  }
+
   return profiles;
 }
 export async function updateProfile(
@@ -161,6 +172,35 @@ export async function updateProfile(
   await browser.storage.local.set({
     [ConfigurationKeys.PROFILES]: profiles
   });
+
+  return profiles;
+}
+export async function deleteProfile(
+  profilePublicKey: string
+): Promise<ProfilesConfig> {
+  console.debug(`Deleting profile: ${profilePublicKey}...`);
+  const profiles = await readProfiles();
+
+  // get the profile and private key for later checks
+  const profileToBeDeleted = profiles[profilePublicKey];
+  const privateKeyToBeDeleted = profileToBeDeleted.privateKey;
+
+  // delete from storage
+  delete profiles[profilePublicKey];
+  await browser.storage.local.set({
+    [ConfigurationKeys.PROFILES]: profiles
+  });
+
+  // now change the active, if it was removed
+  let activePrivateKey = await readActivePrivateKey();
+  if (activePrivateKey == privateKeyToBeDeleted) {
+    if (Object.keys(profiles).length > 0) {
+      activePrivateKey = Object.entries(profiles)[0][1].privateKey;
+    } else {
+      activePrivateKey = '';
+    }
+    await updateActivePrivateKey(activePrivateKey);
+  }
 
   return profiles;
 }
