@@ -464,6 +464,14 @@ input,
       padding-bottom: 1em;
     }
   }
+
+  .modal {
+    max-width: 95%;
+    code {
+      display: block;
+      overflow: scroll;
+    }
+  }
 }
 
 /* ---- Prompt ---- */
