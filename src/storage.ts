@@ -143,6 +143,13 @@ export async function updateProfiles(
     [ConfigurationKeys.PROFILES]: profiles
   });
 
+  // if there's only one profile, then set it as the active one
+  const activePrivateKey = await readActivePrivateKey();
+  if (!activePrivateKey && Object.keys(profiles).length == 1) {
+    const profilePubKey = Object.keys(profiles)[0];
+    await updateActivePrivateKey(profiles[profilePubKey].privateKey);
+  }
+
   return profiles;
 }
 export async function addProfile(

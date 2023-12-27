@@ -23,6 +23,11 @@ $button-radius: 0.3em;
 $font-family: 'Prompt', Arial, Helvetica, sans-serif;
 $font-size: 12pt;
 
+$responsive-break-sm: 40em; // Small devices such as large phones (640px and up)
+$responsive-break-md: 48em; // Medium devices such as tablets (768px and up)
+$responsive-break-lg: 64em; // Large devices such as laptops (1024px and up)
+$responsive-break-xl: 80em; // Largest devices such as desktops (1280px and up)
+
 // ****** Font ******
 @font-face {
   font-family: 'Prompt';
@@ -108,7 +113,6 @@ button,
   justify-content: center;
   border: 2px solid $color-primary;
   background-color: $color-primary;
-  color: $color-primary-inv;
   padding: 0.5em 0.7em;
   text-align: center;
   text-decoration: none;
@@ -116,6 +120,11 @@ button,
   font-size: 0.9em;
   font-weight: 500;
   cursor: pointer;
+
+  &,
+  * {
+    color: $color-primary-inv;
+  }
 
   img,
   svg {

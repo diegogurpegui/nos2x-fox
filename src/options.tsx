@@ -13,7 +13,12 @@ import {
   RelaysConfig
 } from './types';
 import * as Storage from './storage';
-import { getPermissionsString, isHexadecimal, isValidRelayURL } from './common';
+import {
+  getPermissionsString,
+  isHexadecimal,
+  isValidRelayURL,
+  truncatePublicKeys
+} from './common';
 import logotype from './assets/logo/logotype.png';
 import AddCircleIcon from './assets/icons/add-circle-outline.svg';
 import ArrowUpCircleIcon from './assets/icons/arrow-up-circle-outline.svg';
@@ -465,7 +470,11 @@ function Options() {
                   <option value={profilePubKey} key={profilePubKey}>
                     {profilePubKey == ''
                       ? '(new profile)'
-                      : nip19.npubEncode(profilePubKey)}
+                      : truncatePublicKeys(
+                          nip19.npubEncode(profilePubKey),
+                          20,
+                          20
+                        )}
                   </option>
                 ))}
               </select>
@@ -477,22 +486,22 @@ function Options() {
               onClick={handleNewProfileClick}
             >
               <AddCircleIcon />
-              New profile
+              New
             </button>
             <button onClick={handleExportProfileClick}>
               <DownloadIcon />
-              Export profile
+              Export
             </button>
             <button onClick={handleImportProfileClick}>
               <ArrowUpCircleIcon />
-              Import profile
+              Import
             </button>
             <button
               onClick={handleDeleteProfileClick}
               className="button button-danger"
             >
               <TrashIcon />
-              Delete profile
+              Delete
             </button>
           </div>
         </section>
