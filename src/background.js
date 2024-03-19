@@ -17,7 +17,7 @@ browser.runtime.onMessage.addListener((message, sender) => {
   let { prompt } = message;
 
   if (prompt) {
-    return handlePromptMessage(message, sender);
+    handlePromptMessage(message, sender);
   } else {
     return handleContentScriptMessage(message);
   }
@@ -29,6 +29,14 @@ browser.runtime.onMessageExternal.addListener(
     handleContentScriptMessage({ type, params, host: extensionId });
   }
 );
+
+browser.windows.onRemoved.addListener(_windowId => {
+  if (openPrompt) {
+    // calling this with a simple "no" response will not store anything, so it's fine
+    // it will just return a failure
+    handlePromptMessage({accept: false}, null)
+  }
+})
 
 async function handleContentScriptMessage({ type, params, host }) {
   let level = await readPermissionLevel(host);
