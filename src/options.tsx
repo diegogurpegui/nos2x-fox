@@ -25,6 +25,8 @@ import AddCircleIcon from './assets/icons/add-circle-outline.svg';
 import ArrowUpCircleIcon from './assets/icons/arrow-up-circle-outline.svg';
 import CopyIcon from './assets/icons/copy-outline.svg';
 import DiceIcon from './assets/icons/dice-outline.svg';
+import EyeIcon from './assets/icons/eye-outline.svg';
+import EyeOffIcon from './assets/icons/eye-off-outline.svg';
 import DownloadIcon from './assets/icons/download-outline.svg';
 import RadioIcon from './assets/icons/radio-outline.svg';
 import TrashIcon from './assets/icons/trash-outline.svg';
@@ -315,6 +317,10 @@ function Options() {
     setPrivateKey(nip19.nsecEncode(generateSecretKey()));
   }
 
+  function handlePrivateKeyShowClick() {
+    setKeyHidden(!isKeyHidden);
+  }
+
   //#endregion Private key
 
   //#region Permissions
@@ -521,9 +527,10 @@ function Options() {
                 value={privateKey}
                 readOnly={selectedProfilePubKey != ''}
                 onChange={handlePrivateKeyChange}
-                onFocus={() => setKeyHidden(false)}
-                onBlur={() => setKeyHidden(true)}
               />
+              <button onClick={handlePrivateKeyShowClick}>
+                {isKeyHidden ? <EyeIcon /> : <EyeOffIcon />}
+              </button>
               <button onClick={generateRandomPrivateKey}>
                 <DiceIcon /> Generate
               </button>
