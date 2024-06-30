@@ -1,3 +1,4 @@
+import { inspect } from 'util';
 const EXTENSION_CODE = 'nos2x-fox';
 
 window.nostr = {

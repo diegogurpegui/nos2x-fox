@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useDebouncedCallback } from 'use-debounce';
-import { getPublicKey, generatePrivateKey, nip19 } from 'nostr-tools';
+import { getPublicKey, generateSecretKey, nip19 } from 'nostr-tools';
 import { format, formatDistance } from 'date-fns';
 
 import { Alert, Modal } from './components';
@@ -14,6 +14,7 @@ import {
 } from './types';
 import * as Storage from './storage';
 import {
+  convertHexToUint8Array,
   getPermissionsString,
   isHexadecimal,
   isValidRelayURL,
@@ -128,7 +129,9 @@ function Options() {
     setRelays(convertRelaysToUIArray(profile.relays));
     setPermissions(convertPermissionsToUIObject(profile.permissions));
     if (profile.privateKey) {
-      setPrivateKey(nip19.nsecEncode(profile.privateKey));
+      setPrivateKey(
+        nip19.nsecEncode(convertHexToUint8Array(profile.privateKey))
+      );
     } else {
       setPrivateKey('');
     }
@@ -215,12 +218,13 @@ function Options() {
     // store the new profile
     await Storage.addProfile(newProfile);
 
-    const newPubKey = getPublicKey(newProfile.privateKey);
+    const pkU8Array = convertHexToUint8Array(newProfile.privateKey);
+    const newPubKey = getPublicKey(pkU8Array);
     setProfiles({ ...profiles, ...{ [newPubKey]: newProfile } });
 
     // now load in the component
     if (newProfile.privateKey) {
-      setPrivateKey(nip19.nsecEncode(newProfile.privateKey));
+      setPrivateKey(nip19.nsecEncode(pkU8Array));
     } else {
       setPrivateKey('');
     }
@@ -308,7 +312,7 @@ function Options() {
   }
 
   async function generateRandomPrivateKey() {
-    setPrivateKey(nip19.nsecEncode(generatePrivateKey()));
+    setPrivateKey(nip19.nsecEncode(generateSecretKey()));
   }
 
   //#endregion Private key

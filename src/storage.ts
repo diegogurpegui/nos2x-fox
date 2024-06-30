@@ -9,6 +9,7 @@ import {
   ProfilesConfig,
   RelaysConfig
 } from './types';
+import { convertHexToUint8Array } from './common';
 
 export async function readActivePrivateKey(): Promise<string> {
   const data = await browser.storage.local.get(ConfigurationKeys.PRIVATE_KEY);
@@ -18,7 +19,7 @@ export async function updateActivePrivateKey(privateKey: string) {
   if (privateKey == null || privateKey == '') {
     console.log('Removing active profile (private key)');
   } else {
-    console.log('Storing new active pubKey:', getPublicKey(privateKey));
+    console.log('Storing new active pubKey');
   }
 
   return browser.storage.local.set({
@@ -75,14 +76,16 @@ export async function readActivePermissions(): Promise<PermissionConfig> {
 }
 export async function addActivePermission(
   host: string,
-  permission: PermissionConfig[string]
+  condition: string,
+  level: number
 ) {
   let storedPermissions = await readActivePermissions();
 
   storedPermissions = {
     ...storedPermissions,
     [host]: {
-      ...permission,
+      condition,
+      level,
       created_at: Math.round(Date.now() / 1000)
     }
   };
@@ -122,7 +125,7 @@ export async function readProfiles(): Promise<ProfilesConfig> {
         relays: await readActiveRelays(),
         permissions: await readActivePermissions()
       };
-      const pubKey = getPublicKey(privateKey);
+      const pubKey = getPublicKey(convertHexToUint8Array(privateKey));
 
       profiles[pubKey] = profile;
       // save it
@@ -156,7 +159,7 @@ export async function addProfile(
   profile: ProfileConfig
 ): Promise<ProfilesConfig> {
   const profiles = await readProfiles();
-  profiles[getPublicKey(profile.privateKey)] = profile;
+  profiles[getPublicKey(convertHexToUint8Array(profile.privateKey))] = profile;
 
   await browser.storage.local.set({
     [ConfigurationKeys.PROFILES]: profiles
@@ -174,7 +177,7 @@ export async function updateProfile(
   profile: ProfileConfig
 ): Promise<ProfilesConfig> {
   const profiles = await readProfiles();
-  profiles[getPublicKey(profile.privateKey)] = profile;
+  profiles[getPublicKey(convertHexToUint8Array(profile.privateKey))] = profile;
 
   await browser.storage.local.set({
     [ConfigurationKeys.PROFILES]: profiles
@@ -214,7 +217,7 @@ export async function deleteProfile(
 export async function getActiveProfile(): Promise<ProfileConfig> {
   const privateKey = await readActivePrivateKey();
   if (privateKey) {
-    const publicKey = getPublicKey(privateKey);
+    const publicKey = getPublicKey(convertHexToUint8Array(privateKey));
     const profiles = await readProfiles();
     return profiles[publicKey];
   } else {

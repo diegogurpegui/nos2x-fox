@@ -1,5 +1,3 @@
-import { readActivePermissions } from './storage';
-
 export const PERMISSIONS_REQUIRED = {
   getPublicKey: 1,
   getRelays: 5,
@@ -50,10 +48,6 @@ export function getPermissionsString(permission) {
   );
 }
 
-export async function readPermissionLevel(host: string): Promise<number> {
-  return (await readActivePermissions())[host]?.level || 0;
-}
-
 export function truncatePublicKeys(
   publicKey: String,
   startCount: number = 15,
@@ -75,4 +69,36 @@ export function isValidRelayURL(url: string): boolean {
 
 export function isHexadecimal(value: string) {
   return /^[0-9A-Fa-f]+$/g.test(value);
+}
+
+export function convertHexToUint8Array(hexData: string): Uint8Array {
+  // ensure even number of characters
+  if (hexData.length % 2 != 0) {
+    throw new Error(
+      'WARNING: expecting an even number of characters in the hexString'
+    );
+  }
+
+  // check for some non-hex characters
+  var hasInvalidChars = hexData.match(/[G-Z\s]/i);
+  if (hasInvalidChars) {
+    throw new Error(
+      `WARNING: found non-hex characters: ${hasInvalidChars.toString()}`
+    );
+  }
+
+  // split the string into pairs of octets
+  const octectPairs = hexData.match(/[\dA-F]{2}/gi);
+
+  if (!octectPairs) {
+    throw Error('Cannot extract octect pairs.');
+  }
+
+  // convert the octets to integers
+  const integers = octectPairs.map(pair => {
+    return parseInt(pair, 16);
+  });
+
+  const array = new Uint8Array(integers);
+  return array;
 }

@@ -1,7 +1,8 @@
 {
   "name": "nos2x-fox",
   "description": "Nostr Signer Extension (for Firefox)",
-  "version": "1.13.0",
+  "version": "1.14.0",
+  "license": "SEE LICENSE IN LICENSE",
   "repository": {
     "url": "https://github.com/diegogurpegui/nos2x-fox",
     "type": "github"
@@ -16,26 +17,27 @@
     "start:firefox": "web-ext run --source-dir ./dist/"
   },
   "dependencies": {
-    "date-fns": "^2.29.3",
+    "date-fns": "3.6.0",
     "events": "^3.3.0",
-    "nostr-tools": "^1.1.0",
+    "nostr-tools": "2.7.0",
     "react": "^18",
     "react-dom": "^18",
     "use-boolean-state": "^1.0.2",
-    "use-debounce": "^9.0.3",
-    "webextension-polyfill": "^0.10"
+    "use-debounce": "10.0.1",
+    "webextension-polyfill": "0.12.0"
   },
   "devDependencies": {
-    "esbuild": "^0.19.2",
+    "esbuild": "0.22.0",
     "esbuild-plugin-clean": "^1.0.1",
     "esbuild-plugin-copy": "^2.0.1",
     "esbuild-plugin-svgr": "^2.1.0",
-    "esbuild-sass-plugin": "^2.4.5",
-    "eslint": "^8.6.0",
+    "esbuild-sass-plugin": "3.3.1",
+    "eslint": "9.6.0",
     "eslint-plugin-babel": "^5.3.1",
     "eslint-plugin-react": "^7.28.0",
     "prettier": "^3.0.3",
     "sass": "^1.58.3",
-    "web-ext": "^7.9.0"
-  }
+    "web-ext": "8.2.0"
+  },
+  "packageManager": "yarn@1.22.19+sha1.4ba7fc5c6e704fce2066ecbfb0b0d8976fe62447"
 }

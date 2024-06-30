@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 
 import { ProfilesConfig } from './types';
 import * as Storage from './storage';
-import { truncatePublicKeys } from './common';
+import { convertHexToUint8Array, truncatePublicKeys } from './common';
 
 import logotype from './assets/logo/logotype.png';
 import CopyIcon from './assets/icons/copy-outline.svg';
@@ -20,7 +20,7 @@ function Popup() {
   useEffect(() => {
     Storage.readActivePrivateKey().then(privateKey => {
       if (privateKey) {
-        const pubKey = getPublicKey(privateKey);
+        const pubKey = getPublicKey(convertHexToUint8Array(privateKey));
         setPublicKeyHexa(pubKey);
       } else {
         setPublicKeyHexa(null);

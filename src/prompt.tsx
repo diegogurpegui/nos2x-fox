@@ -3,7 +3,12 @@ import { createRoot } from 'react-dom/client';
 import React from 'react';
 
 import { getAllowedCapabilities } from './common';
-import { AuthorizationCondition, KindNames, PromptParams } from './types';
+import {
+  AuthorizationCondition,
+  KindNames,
+  PromptParams,
+  PromptResponse
+} from './types';
 
 import ShieldCheckmarkIcon from './assets/icons/shield-checkmark-outline.svg';
 import TimerIcon from './assets/icons/timer-outline.svg';
@@ -109,13 +114,14 @@ function Prompt() {
   function authorizeHandler(condition) {
     return function (ev) {
       ev.preventDefault();
-      browser.runtime.sendMessage({
+      const promptResponse: PromptResponse = {
         prompt: true,
         id,
         host,
         level,
         condition
-      });
+      };
+      browser.runtime.sendMessage(promptResponse);
     };
   }
 

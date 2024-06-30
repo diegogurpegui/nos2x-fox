@@ -65,6 +65,14 @@ export enum AuthorizationCondition {
   SINGLE = 'single'
 }
 
+export type PromptResponse = {
+  prompt: boolean;
+  condition: AuthorizationCondition;
+  id?;
+  host: string | null;
+  level?: number;
+};
+
 export type PromptParams = {
   event?: {
     kind: number;

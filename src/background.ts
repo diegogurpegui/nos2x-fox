@@ -1,17 +1,17 @@
 import browser from 'webextension-polyfill';
 import {
   validateEvent,
-  signEvent,
+  finalizeEvent,
   getEventHash,
   getPublicKey
 } from 'nostr-tools';
-import { nip04 } from 'nostr-tools';
+import { nip04, EventTemplate } from 'nostr-tools';
 
 import * as Storage from './storage';
-import { AuthorizationCondition } from './types';
-import { PERMISSIONS_REQUIRED, readPermissionLevel } from './common';
+import { AuthorizationCondition, PromptResponse } from './types';
+import { PERMISSIONS_REQUIRED, convertHexToUint8Array } from './common';
 
-let openPrompt = null;
+let openPrompt: { resolve: Function; reject: Function } | null = null;
 
 browser.runtime.onMessage.addListener((message, sender) => {
   let { prompt } = message;
@@ -32,11 +32,17 @@ browser.runtime.onMessageExternal.addListener(
 
 browser.windows.onRemoved.addListener(_windowId => {
   if (openPrompt) {
-    // calling this with a simple "no" response will not store anything, so it's fine
-    // it will just return a failure
-    handlePromptMessage({accept: false}, null)
+    // If the window is closed, then take it as a Reject
+    handlePromptMessage(
+      {
+        prompt: true,
+        condition: AuthorizationCondition.REJECT,
+        host: null
+      },
+      null
+    );
   }
-})
+});
 
 async function handleContentScriptMessage({ type, params, host }) {
   let level = await readPermissionLevel(host);
@@ -68,7 +74,8 @@ async function handleContentScriptMessage({ type, params, host }) {
     return { error: 'no private key found' };
   }
 
-  let sk = privateKey;
+  // privateKey is in hexa, we must convert to UInt8Array for working
+  const sk = convertHexToUint8Array(privateKey);
 
   try {
     switch (type) {
@@ -87,8 +94,8 @@ async function handleContentScriptMessage({ type, params, host }) {
 
         if (!validateEvent(event)) return { error: 'invalid event' };
 
-        event.sig = await signEvent(event, sk);
-        return event;
+        const finalizedEvent = await finalizeEvent(event, sk);
+        return finalizedEvent;
       }
       case 'nip04.encrypt': {
         let { peer, plaintext } = params;
@@ -104,7 +111,10 @@ async function handleContentScriptMessage({ type, params, host }) {
   }
 }
 
-function handlePromptMessage({ id, condition, host, level }, sender) {
+function handlePromptMessage(
+  { id, condition, host, level }: PromptResponse,
+  sender
+) {
   try {
     switch (condition) {
       case AuthorizationCondition.FOREVER:
@@ -112,10 +122,7 @@ function handlePromptMessage({ id, condition, host, level }, sender) {
       case AuthorizationCondition.EXPIRABLE_1H:
       case AuthorizationCondition.EXPIRABLE_8H:
         openPrompt?.resolve?.(true);
-        Storage.addActivePermission(host, {
-          level,
-          condition
-        });
+        Storage.addActivePermission(host ?? '', condition, parseInt(level, 10));
         break;
       case AuthorizationCondition.SINGLE:
         openPrompt?.resolve?.(true);
@@ -170,4 +177,8 @@ function promptPermission(host, level, params) {
 
     openPrompt = { resolve, reject };
   });
+}
+
+async function readPermissionLevel(host: string): Promise<number> {
+  return (await Storage.readActivePermissions())[host]?.level || 0;
 }
