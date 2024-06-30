@@ -121,8 +121,12 @@ function handlePromptMessage(
       case AuthorizationCondition.EXPIRABLE_5M:
       case AuthorizationCondition.EXPIRABLE_1H:
       case AuthorizationCondition.EXPIRABLE_8H:
-        openPrompt?.resolve?.(true);
-        Storage.addActivePermission(host ?? '', condition, parseInt(level, 10));
+        if (level) {
+          openPrompt?.resolve?.(true);
+          Storage.addActivePermission(host ?? '', condition, level);
+        } else {
+          console.warn('No authorization level provided');
+        }
         break;
       case AuthorizationCondition.SINGLE:
         openPrompt?.resolve?.(true);
