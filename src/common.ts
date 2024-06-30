@@ -19,7 +19,9 @@ const PERMISSION_NAMES = {
   getRelays: 'read your list of preferred relays',
   signEvent: 'sign events using your private key',
   'nip04.encrypt': 'encrypt messages to peers',
-  'nip04.decrypt': 'decrypt messages from peers'
+  'nip04.decrypt': 'decrypt messages from peers',
+  'nip44.encrypt': 'encrypt messages to peers (nip44)',
+  'nip44.decrypt': 'decrypt messages from peers (nip44)'
 };
 
 export function getAllowedCapabilities(permission): string[] {

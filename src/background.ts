@@ -3,13 +3,15 @@ import {
   validateEvent,
   finalizeEvent,
   getEventHash,
-  getPublicKey
+  getPublicKey,
+  nip44
 } from 'nostr-tools';
 import { nip04, EventTemplate } from 'nostr-tools';
 
 import * as Storage from './storage';
 import { AuthorizationCondition, PromptResponse } from './types';
 import { PERMISSIONS_REQUIRED, convertHexToUint8Array } from './common';
+import { LRUCache } from './LRUCache';
 
 let openPrompt: { resolve: Function; reject: Function } | null = null;
 
@@ -105,6 +107,16 @@ async function handleContentScriptMessage({ type, params, host }) {
         let { peer, ciphertext } = params;
         return nip04.decrypt(sk, peer, ciphertext);
       }
+      case 'nip44.encrypt': {
+        const { peer, plaintext } = params;
+        const key = getSharedSecret(sk, peer);
+        return nip44.v2.decrypt(plaintext, key);
+      }
+      case 'nip44.decrypt': {
+        const { peer, ciphertext } = params;
+        const key = getSharedSecret(sk, peer);
+        return nip44.v2.decrypt(ciphertext, key);
+      }
     }
   } catch (error) {
     return { error: { message: error.message, stack: error.stack } };
@@ -185,4 +197,23 @@ function promptPermission(host, level, params) {
 
 async function readPermissionLevel(host: string): Promise<number> {
   return (await Storage.readActivePermissions())[host]?.level || 0;
+}
+
+// prepare a cache of the last 100 shared keys used
+const secretsCache = new LRUCache<string, Uint8Array>(100);
+let previousSk: Uint8Array | null = null;
+function getSharedSecret(sk: Uint8Array, peer: string) {
+  // Detect a private key change and erase the cache if they changed their key
+  if (previousSk !== sk) {
+    secretsCache.clear();
+  }
+
+  let key = secretsCache.get(peer);
+
+  if (!key) {
+    key = nip44.v2.utils.getConversationKey(sk, peer);
+    secretsCache.set(peer, key);
+  }
+
+  return key;
 }
