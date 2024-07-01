@@ -12,8 +12,8 @@ import CopyIcon from './assets/icons/copy-outline.svg';
 import CogIcon from './assets/icons/cog-outline.svg';
 
 function Popup() {
-  let [publicKeyHexa, setPublicKeyHexa] = useState('');
-  let [publiKeyNIP19, setPublicKeyNIP19] = useState('');
+  let [publicKeyHexa, setPublicKeyHexa] = useState<string>();
+  let [publiKeyNIP19, setPublicKeyNIP19] = useState<string>();
   let [selectedKeyType, setSelectedKeyType] = useState('npub');
   let [profiles, setProfiles] = useState<ProfilesConfig>({});
 
@@ -23,8 +23,8 @@ function Popup() {
         const pubKey = getPublicKey(convertHexToUint8Array(privateKey));
         setPublicKeyHexa(pubKey);
       } else {
-        setPublicKeyHexa(null);
-        setPublicKeyNIP19(null);
+        setPublicKeyHexa(undefined);
+        setPublicKeyNIP19(undefined);
       }
     });
 
@@ -85,7 +85,7 @@ function Popup() {
 
   function clipboardCopyPubKey() {
     navigator.clipboard.writeText(
-      selectedKeyType === 'hex' ? publicKeyHexa : publiKeyNIP19
+      (selectedKeyType === 'hex' ? publicKeyHexa : publiKeyNIP19) ?? ''
     );
   }
 
@@ -94,7 +94,7 @@ function Popup() {
       <h1>
         <img src={logotype} alt="nos2x-fox" />
       </h1>
-      {publicKeyHexa === null ? (
+      {!publicKeyHexa ? (
         <p>
           You don't have a private key set. Use the{' '}
           <a href="#" onClick={goToOptionsPage}>
@@ -109,7 +109,8 @@ function Popup() {
             <div className="pubkey-show">
               <code>
                 {truncatePublicKeys(
-                  selectedKeyType === 'hex' ? publicKeyHexa : publiKeyNIP19
+                  (selectedKeyType === 'hex' ? publicKeyHexa : publiKeyNIP19) ??
+                    ''
                 )}
               </code>
               <button className="button-onlyicon" onClick={clipboardCopyPubKey}>
