@@ -46,6 +46,7 @@ export type PermissionConfig = {
 
 export type ProfileConfig = {
   privateKey: string;
+  name?: string;
   relays?: RelaysConfig;
   permissions?: PermissionConfig;
 };

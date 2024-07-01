@@ -113,7 +113,11 @@ function Popup() {
                     ''
                 )}
               </code>
-              <button className="button-onlyicon" onClick={clipboardCopyPubKey}>
+              <button
+                className="button-onlyicon"
+                onClick={clipboardCopyPubKey}
+                title="Copy the public key to the clipboard"
+              >
                 <CopyIcon />
               </button>
             </div>
@@ -121,7 +125,8 @@ function Popup() {
               <select value={publicKeyHexa} onChange={handleProfileChange}>
                 {Object.keys(profiles).map(profilePubKey => (
                   <option value={profilePubKey} key={profilePubKey}>
-                    {nip19.npubEncode(profilePubKey)}
+                    {profiles[profilePubKey].name ??
+                      nip19.npubEncode(profilePubKey)}
                   </option>
                 ))}
               </select>

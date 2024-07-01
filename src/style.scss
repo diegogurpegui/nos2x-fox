@@ -439,6 +439,12 @@ input,
         }
       }
 
+      #selected-profile {
+        display: flex;
+        flex-direction: row;
+        column-gap: 1em;
+      }
+
       .profile-actions {
         display: flex;
         flex-direction: row;

@@ -29,6 +29,7 @@ import DiceIcon from './assets/icons/dice-outline.svg';
 import EyeIcon from './assets/icons/eye-outline.svg';
 import EyeOffIcon from './assets/icons/eye-off-outline.svg';
 import DownloadIcon from './assets/icons/download-outline.svg';
+import PencilIcon from './assets/icons/pencil-outline.svg';
 import RadioIcon from './assets/icons/radio-outline.svg';
 import TrashIcon from './assets/icons/trash-outline.svg';
 import WarningIcon from './assets/icons/warning-outline.svg';
@@ -42,8 +43,10 @@ function Options() {
   let [selectedProfilePubKey, setSelectedProfilePubKey] = useState<string>('');
   let [profiles, setProfiles] = useState<ProfilesConfig>({});
   let [isLoadingProfile, setLoadingProfile] = useState(false);
+  let [profileName, setProfileName] = useState<string>();
   let [profileExportJson, setProfileExportJson] = useState('');
   let [profileImportJson, setProfileImportJson] = useState('');
+  let [isRenameModalShown, setRenameModalShown] = useState(false);
   let [isExportModalShown, setExportModalShown] = useState(false);
   let [isImportModalShown, setImportModalShown] = useState(false);
 
@@ -136,6 +139,7 @@ function Options() {
       return;
     }
     setLoadingProfile(true);
+    setProfileName(profile.name);
     setRelays(convertRelaysToUIArray(profile.relays));
     setPermissions(convertPermissionsToUIObject(profile.permissions));
     if (profile.privateKey) {
@@ -182,6 +186,29 @@ function Options() {
     } else {
       return null;
     }
+  }
+
+  function handleProfileRenameClick() {
+    const profile = getSelectedProfile();
+    if (profile) {
+      setProfileName(profile.name);
+      setRenameModalShown(true);
+    }
+  }
+  function handleProfileNameChange(e) {
+    setProfileName(e.target.value);
+  }
+  async function handleProfileRenameConfirm() {
+    const profile = getSelectedProfile();
+    // if name didn't change, do nothing
+    if (profile && profileName != profile.name) {
+      profile.name = profileName?.trim() != '' ? profileName : undefined;
+      await Storage.updateProfile(profile);
+    }
+    setRenameModalShown(false);
+  }
+  function handleProfileRenameModalClose() {
+    setRenameModalShown(false);
   }
 
   function handleExportProfileClick() {
@@ -488,7 +515,7 @@ function Options() {
           <h3>Profile</h3>
           <div className="form-field">
             <label htmlFor="selected-profile">Selected profile:</label>
-            <div className="select" id="selected-profile">
+            <div id="selected-profile">
               <select
                 value={selectedProfilePubKey}
                 onChange={handleSelectedProfileChange}
@@ -497,7 +524,8 @@ function Options() {
                   <option value={profilePubKey} key={profilePubKey}>
                     {profilePubKey == ''
                       ? '(new profile)'
-                      : truncatePublicKeys(
+                      : profiles[profilePubKey].name ??
+                        truncatePublicKeys(
                           nip19.npubEncode(profilePubKey),
                           20,
                           20
@@ -505,6 +533,13 @@ function Options() {
                   </option>
                 ))}
               </select>
+              <button
+                disabled={isNewProfilePending()}
+                onClick={handleProfileRenameClick}
+              >
+                <PencilIcon />
+                Rename
+              </button>
             </div>
           </div>
           <div className="profile-actions">
@@ -675,6 +710,23 @@ function Options() {
         </section>
       </main>
       <footer>version {version}</footer>
+
+      <Modal
+        show={isRenameModalShown}
+        className="rename-modal"
+        onClose={handleProfileRenameModalClose}
+      >
+        <div className="form-field">
+          <label htmlFor="profile-name">Profile name:</label>
+          <input
+            id="profile-name"
+            type="text"
+            value={profileName ?? ''}
+            onChange={handleProfileNameChange}
+          />
+        </div>
+        <button onClick={handleProfileRenameConfirm}>Save</button>
+      </Modal>
 
       <Modal
         show={isExportModalShown}
