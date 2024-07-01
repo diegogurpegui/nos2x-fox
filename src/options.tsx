@@ -15,6 +15,7 @@ import {
 import * as Storage from './storage';
 import {
   convertHexToUint8Array,
+  convertUint8ArrayToHex,
   getPermissionsString,
   isHexadecimal,
   isValidRelayURL,
@@ -46,12 +47,19 @@ function Options() {
   let [isExportModalShown, setExportModalShown] = useState(false);
   let [isImportModalShown, setImportModalShown] = useState(false);
 
-  let [privateKey, setPrivateKey] = useState('');
+  let [privateKey, setPrivateKey] = useState<string>('');
   let [isKeyHidden, setKeyHidden] = useState(true);
-  let [relays, setRelays] = useState([]);
+  let [relays, setRelays] = useState<RelayConfig[]>([]);
   let [newRelayURL, setNewRelayURL] = useState('');
   let [isNewRelayURLValid, setNewRelayURLValid] = useState(true);
-  let [permissions, setPermissions] = useState();
+  let [permissions, setPermissions] = useState<
+    {
+      host: string;
+      level: number;
+      condition: string;
+      created_at: number;
+    }[]
+  >();
   let [message, setMessage] = useState('');
   let [messageType, setMessageType] = useState('info');
 
@@ -111,13 +119,13 @@ function Options() {
     msg: string,
     type?: 'info' | 'success' | 'warning',
     timeout?: number
-  ) => {} = useCallback((msg, type = 'info', timeout = 3000) => {
+  ) => void = useCallback((msg, type = 'info', timeout = 3000) => {
     setMessageType(type);
     setMessage(msg);
     if (timeout > 0) {
       setTimeout(setMessage, 3000);
     }
-  });
+  }, []);
 
   //#region Profiles
 
@@ -160,7 +168,7 @@ function Options() {
     setSelectedProfilePubKey('');
 
     setRelays([]);
-    setPermissions(null);
+    setPermissions(undefined);
     setPrivateKey('');
   }
 
@@ -267,25 +275,34 @@ function Options() {
   async function savePrivateKey() {
     if (!isKeyValid()) return;
 
-    let hexOrEmptyPrivKey = privateKey;
+    if (privateKey == '') {
+      console.warn("Won't save an empty private key");
+      return;
+    }
 
-    if (!isHexadecimal(privateKey)) {
+    let privateKeyIntArray: Uint8Array | undefined = undefined;
+
+    if (isHexadecimal(privateKey)) {
+      privateKeyIntArray = convertHexToUint8Array(privateKey);
+    } else {
       try {
         let { type, data } = nip19.decode(privateKey);
-        if (type === 'nsec') hexOrEmptyPrivKey = data;
+        if (type === 'nsec') privateKeyIntArray = data as Uint8Array;
       } catch (err) {
         console.error('Converting key to hexa (decode NIP19)', err);
       }
     }
 
-    if (hexOrEmptyPrivKey !== '') {
-      const privKeyNip19 = nip19.nsecEncode(hexOrEmptyPrivKey);
+    if (privateKeyIntArray) {
+      const privKeyNip19 = nip19.nsecEncode(privateKeyIntArray);
       setPrivateKey(privKeyNip19);
 
       // if new profile need to re-calculate pub key
-      const newPubKey = getPublicKey(hexOrEmptyPrivKey);
+      const newPubKey = getPublicKey(privateKeyIntArray);
       profiles[newPubKey] = profiles[selectedProfilePubKey];
-      profiles[newPubKey].privateKey = hexOrEmptyPrivKey; // save the hex version in the profile
+      // save the hex version in the profile
+      profiles[newPubKey].privateKey =
+        convertUint8ArrayToHex(privateKeyIntArray);
       delete profiles[selectedProfilePubKey];
       setSelectedProfilePubKey(newPubKey); // this re-loads the profile in the screen
 
@@ -546,7 +563,7 @@ function Options() {
 
         <section>
           <h3>Permissions</h3>
-          {permissions?.length > 0 ? (
+          {permissions && permissions.length > 0 ? (
             <>
               <table>
                 <thead>

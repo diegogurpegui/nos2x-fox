@@ -27,6 +27,7 @@
     "webextension-polyfill": "0.12.0"
   },
   "devDependencies": {
+    "@types/react": "^18.3.3",
     "esbuild": "0.22.0",
     "esbuild-plugin-clean": "^1.0.1",
     "esbuild-plugin-copy": "^2.0.1",

@@ -4,7 +4,7 @@ import React, { useRef, useEffect, useState } from 'react';
 interface ModalProps {
   show: boolean;
   className?: string;
-  onClose: () => {};
+  onClose: () => void;
 }
 
 export function Modal({

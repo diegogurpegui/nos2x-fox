@@ -82,7 +82,7 @@ export function convertHexToUint8Array(hexData: string): Uint8Array {
   }
 
   // check for some non-hex characters
-  var hasInvalidChars = hexData.match(/[G-Z\s]/i);
+  const hasInvalidChars = hexData.match(/[G-Z\s]/i);
   if (hasInvalidChars) {
     throw new Error(
       `WARNING: found non-hex characters: ${hasInvalidChars.toString()}`
@@ -103,4 +103,13 @@ export function convertHexToUint8Array(hexData: string): Uint8Array {
 
   const array = new Uint8Array(integers);
   return array;
+}
+
+export function convertUint8ArrayToHex(arrayData: Uint8Array): string {
+  let hexData = '';
+  for (let i = 0; i < arrayData.length; i++) {
+    const value = arrayData[i];
+    hexData = hexData + ('0' + value.toString(16)).slice(-2);
+  }
+  return hexData;
 }
