@@ -1,5 +1,5 @@
 ![](src/assets/logo/logotype.png)
-# nos2x-fox (nos2x for Forefox)
+# nos2x-fox (nos2x for Firefox)
 notes and other stuff signed by an extension
 
 This is a fork from https://github.com/fiatjaf/nos2x focused on Firefox and related browsers.
