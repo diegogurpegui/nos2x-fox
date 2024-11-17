@@ -49,6 +49,10 @@
         {
           "version": "1.14.0.1",
           "update_link": "https://github.com/diegogurpegui/nos2x-fox/releases/download/v1.14.0/nos2x-fox_1.14.0.1.signed.xpi"
+        },
+        {
+          "version": "1.15.0.1",
+          "update_link": "https://github.com/diegogurpegui/nos2x-fox/releases/download/v1.15.0/nos2x-fox_1.15.0.1.signed.xpi"
         }
       ]
     }
