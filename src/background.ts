@@ -110,7 +110,7 @@ async function handleContentScriptMessage({ type, params, host }) {
       case 'nip44.encrypt': {
         const { peer, plaintext } = params;
         const key = getSharedSecret(sk, peer);
-        return nip44.v2.decrypt(plaintext, key);
+        return nip44.v2.encrypt(plaintext, key);
       }
       case 'nip44.decrypt': {
         const { peer, ciphertext } = params;
