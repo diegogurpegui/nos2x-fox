@@ -89,15 +89,20 @@ async function handleContentScriptMessage({ type, params, host }) {
         return relays || {};
       }
       case 'signEvent': {
-        let { event } = params;
+        // check if the pubkey used corresponds to the active profile
+        const activePubKey = getPublicKey(sk);
+        if (params.event.pubkey !== activePubKey) {
+          console.warn(
+            `Pubkey used (${params.event.pubkey}) doesn't match the active profile (${activePubKey}).`
+          );
+          throw new Error(`Public key used doesn't match the active profile.`);
+        }
 
-        if (!event.pubkey) event.pubkey = getPublicKey(sk);
-        if (!event.id) event.id = getEventHash(event);
+        const event = finalizeEvent(params.event, sk);
 
-        if (!validateEvent(event)) return { error: 'invalid event' };
-
-        const finalizedEvent = await finalizeEvent(event, sk);
-        return finalizedEvent;
+        return validateEvent(event)
+          ? event
+          : { error: { message: 'invalid event' } };
       }
       case 'nip04.encrypt': {
         let { peer, plaintext } = params;
