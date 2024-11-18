@@ -89,9 +89,10 @@ async function handleContentScriptMessage({ type, params, host }) {
         return relays || {};
       }
       case 'signEvent': {
-        // check if the pubkey used corresponds to the active profile
         const activePubKey = getPublicKey(sk);
-        if (params.event.pubkey !== activePubKey) {
+        // check if the pubkey used corresponds to the active profile
+        // only do it when pubkey is not empty, since some sites don't specify it
+        if (params.event.pubkey && params.event.pubkey !== activePubKey) {
           console.warn(
             `Pubkey used (${params.event.pubkey}) doesn't match the active profile (${activePubKey}).`
           );
