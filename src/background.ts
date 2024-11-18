@@ -1,12 +1,6 @@
 import browser from 'webextension-polyfill';
-import {
-  validateEvent,
-  finalizeEvent,
-  getEventHash,
-  getPublicKey,
-  nip44
-} from 'nostr-tools';
-import { nip04, EventTemplate } from 'nostr-tools';
+import { validateEvent, finalizeEvent, getPublicKey, nip44 } from 'nostr-tools';
+import { nip04 } from 'nostr-tools';
 
 import * as Storage from './storage';
 import { AuthorizationCondition, PromptResponse } from './types';

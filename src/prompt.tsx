@@ -1,21 +1,31 @@
+import React, { useEffect } from 'react';
 import browser from 'webextension-polyfill';
 import { createRoot } from 'react-dom/client';
-import React from 'react';
 
-import { getAllowedCapabilities } from './common';
+import {
+  convertHexToUint8Array,
+  getAllowedCapabilities,
+  truncatePublicKeys
+} from './common';
 import {
   AuthorizationCondition,
   KindNames,
+  ProfileConfig,
   PromptParams,
   PromptResponse
 } from './types';
+import * as Storage from './storage';
 
 import ShieldCheckmarkIcon from './assets/icons/shield-checkmark-outline.svg';
 import TimerIcon from './assets/icons/timer-outline.svg';
 import CheckmarkCircleIcon from './assets/icons/checkmark-circle-outline.svg';
 import CloseCircleIcon from './assets/icons/close-circle-outline.svg';
+import { getPublicKey, nip19 } from 'nostr-tools';
 
 function Prompt() {
+  const [activeProfile, setActiveProfile] = React.useState<ProfileConfig>();
+  const [activePubKeyNIP19, setActivePubKeyNIP19] = React.useState<string>('');
+
   const queryString = new URLSearchParams(location.search);
   const id = queryString.get('id');
   const host = queryString.get('host');
@@ -41,10 +51,62 @@ function Prompt() {
     console.error('Error parsing params.', err);
   }
 
+  useEffect(() => {
+    Storage.getActiveProfile().then(profile => {
+      setActiveProfile(profile);
+      const pkUint = convertHexToUint8Array(profile.privateKey);
+      setActivePubKeyNIP19(nip19.npubEncode(getPublicKey(pkUint)));
+    });
+  });
+
+  function authorizeHandler(condition) {
+    return function (ev) {
+      ev.preventDefault();
+      const promptResponse: PromptResponse = {
+        prompt: true,
+        id,
+        host,
+        level,
+        condition
+      };
+      browser.runtime.sendMessage(promptResponse);
+    };
+  }
+
+  function getKindDescription(kind: number) {
+    for (const kindCode in KindNames) {
+      if (kindCode.includes('-')) {
+        // check whether the kind is within a recognized range
+        const range = kindCode.split('-');
+        if (kind >= parseInt(range[0]) && kind <= parseInt(range[1])) {
+          return KindNames[kindCode];
+        }
+      } else {
+        // check whether the kind is a specific value
+        const kindCodeN = parseInt(kindCode);
+        if (kind == kindCodeN) {
+          return KindNames[kindCode];
+        }
+      }
+    }
+    return null;
+  }
+
   return (
     <>
       <div>
         <h1 className="prompt-host">{host}</h1>
+        <p>
+          Signing with profile:{' '}
+          <strong>
+            {activeProfile && (
+              <span>
+                {activeProfile.name} (
+                {truncatePublicKeys(activePubKeyNIP19, 10, 10)})
+              </span>
+            )}
+          </strong>
+        </p>
         <p>
           Event:{' '}
           <span className="badge">
@@ -110,39 +172,6 @@ function Prompt() {
       )}
     </>
   );
-
-  function authorizeHandler(condition) {
-    return function (ev) {
-      ev.preventDefault();
-      const promptResponse: PromptResponse = {
-        prompt: true,
-        id,
-        host,
-        level,
-        condition
-      };
-      browser.runtime.sendMessage(promptResponse);
-    };
-  }
-
-  function getKindDescription(kind: number) {
-    for (const kindCode in KindNames) {
-      if (kindCode.includes('-')) {
-        // check whether the kind is within a recognized range
-        const range = kindCode.split('-');
-        if (kind >= parseInt(range[0]) && kind <= parseInt(range[1])) {
-          return KindNames[kindCode];
-        }
-      } else {
-        // check whether the kind is a specific value
-        const kindCodeN = parseInt(kindCode);
-        if (kind == kindCodeN) {
-          return KindNames[kindCode];
-        }
-      }
-    }
-    return null;
-  }
 }
 
 const root = createRoot(document.getElementById('main'));
