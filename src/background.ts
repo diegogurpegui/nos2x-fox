@@ -43,20 +43,29 @@ browser.windows.onRemoved.addListener(_windowId => {
 async function handleContentScriptMessage({ type, params, host }) {
   let level = await readPermissionLevel(host);
 
-  if (level >= PERMISSIONS_REQUIRED[type]) {
+  let permName = type
+  // initPublicKey doesn't need a separate permission, use getPublicKey.
+  if (type == 'initPublicKey') permName = 'getPublicKey';
+
+  if (level >= PERMISSIONS_REQUIRED[permName]) {
     // authorized, proceed
   } else {
+    if (type === 'initPublicKey') {
+      // Pubkey not authorized.
+      return null
+    }
+
     // ask for authorization
     try {
       const isAllowed = await promptPermission(
         host,
-        PERMISSIONS_REQUIRED[type],
+        PERMISSIONS_REQUIRED[permName],
         params
       );
       if (!isAllowed) {
         // not authorized, stop here
         return {
-          error: `Insufficient permissions, required ${PERMISSIONS_REQUIRED[type]}`
+          error: `Insufficient permissions, required ${PERMISSIONS_REQUIRED[permName]}`
         };
       }
     } catch (error) {
@@ -75,6 +84,7 @@ async function handleContentScriptMessage({ type, params, host }) {
 
   try {
     switch (type) {
+      case 'initPublicKey':
       case 'getPublicKey': {
         return getPublicKey(sk);
       }
