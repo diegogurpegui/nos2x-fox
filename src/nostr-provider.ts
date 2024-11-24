@@ -5,6 +5,12 @@ window.nostr = {
   _requests: {},
   _pubkey: null,
 
+  async getPublicKeyIfApproved() {
+    if (this._pubkey || this._pubkey === '') return this._pubkey;
+    this._pubkey = await this._call('getPublicKeyIfApproved', {});
+    return this._pubkey;
+  },
+
   async getPublicKey() {
     if (this._pubkey) return this._pubkey;
     this._pubkey = await this._call('getPublicKey', {});
