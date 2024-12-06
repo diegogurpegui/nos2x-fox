@@ -3,12 +3,21 @@ const EXTENSION_CODE = 'nos2x-fox';
 
 window.nostr = {
   _requests: {},
-  _pubkey: null,
+  pubkey: window.__nostr_pubkey,
 
   async getPublicKey() {
-    if (this._pubkey) return this._pubkey;
-    this._pubkey = await this._call('getPublicKey', {});
-    return this._pubkey;
+    console.warn("Deprecated")
+    this.pubkey = await this._call('getPublicKey', {});
+    return this.pubkey;
+  },
+
+  async login() {
+    this.pubkey = await this._call('getPublicKey', {});
+    return this.pubkey;
+  },
+
+  async logout() {
+    // TODO: clear the permission for page in browser extension
   },
 
   async signEvent(event) {
@@ -71,6 +80,7 @@ window.nostr = {
     });
   }
 };
+delete window.__nostr_pubkey;
 
 window.addEventListener('message', message => {
   if (
