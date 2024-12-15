@@ -3,7 +3,7 @@ export class LRUCache<K, V> {
   private map: Map<K, V>;
   private keys: any[];
 
-  constructor(maxSize) {
+  constructor(maxSize: number) {
     this.maxSize = maxSize;
     this.map = new Map();
     this.keys = [];
@@ -13,11 +13,11 @@ export class LRUCache<K, V> {
     this.map.clear();
   }
 
-  has(k) {
+  has(k: K): boolean {
     return this.map.has(k);
   }
 
-  get(k) {
+  get(k: K): V | undefined {
     const v = this.map.get(k);
 
     if (v !== undefined) {
@@ -31,7 +31,7 @@ export class LRUCache<K, V> {
     return v;
   }
 
-  set(k, v) {
+  set(k: K, v: V) {
     this.map.set(k, v);
     this.keys.push(k);
 

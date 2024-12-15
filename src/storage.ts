@@ -31,7 +31,10 @@ export async function readActiveRelays(): Promise<RelaysConfig> {
   const activeProfile = await getActiveProfile();
   return activeProfile.relays || {};
 }
-export async function updateRelays(profilePublicKey: string, newRelays) {
+export async function updateRelays(
+  profilePublicKey: string,
+  newRelays
+): Promise<ProfilesConfig | undefined> {
   if (newRelays) {
     const profile = await getProfile(profilePublicKey);
     if (!profile) {
@@ -78,7 +81,7 @@ export async function addActivePermission(
   host: string,
   condition: string,
   level: number
-) {
+): Promise<ProfilesConfig> {
   let storedPermissions = await readActivePermissions();
 
   storedPermissions = {
@@ -98,7 +101,7 @@ export async function addActivePermission(
 export async function removePermissions(
   profilePublicKey: string,
   host: string
-) {
+): Promise<ProfilesConfig> {
   const profile = await getProfile(profilePublicKey);
   let permissions = profile.permissions;
   if (permissions) {

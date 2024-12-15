@@ -1,46 +1,66 @@
-import { inspect } from 'util';
+import { Event, VerifiedEvent } from 'nostr-tools';
+import {
+  ContentScriptMessageResponseError,
+  PromptParams,
+  RelaysConfig
+} from './types';
+
 const EXTENSION_CODE = 'nos2x-fox';
 
 window.nostr = {
   _requests: {},
   _pubkey: null,
 
-  async getPublicKey() {
+  async getPublicKey(): Promise<string | ContentScriptMessageResponseError> {
     if (this._pubkey) return this._pubkey;
     this._pubkey = await this._call('getPublicKey', {});
     return this._pubkey;
   },
 
-  async signEvent(event) {
+  async signEvent(
+    event: Event
+  ): Promise<VerifiedEvent | ContentScriptMessageResponseError> {
     return this._call('signEvent', { event });
   },
 
-  async getRelays() {
+  async getRelays(): Promise<RelaysConfig | ContentScriptMessageResponseError> {
     return this._call('getRelays', {});
   },
 
   nip04: {
-    async encrypt(peer, plaintext) {
+    async encrypt(
+      peer: string,
+      plaintext: string
+    ): Promise<string | ContentScriptMessageResponseError> {
       return window.nostr._call('nip04.encrypt', { peer, plaintext });
     },
 
-    async decrypt(peer, ciphertext) {
+    async decrypt(
+      peer: string,
+      ciphertext: string
+    ): Promise<string | ContentScriptMessageResponseError> {
       return window.nostr._call('nip04.decrypt', { peer, ciphertext });
     }
   },
 
   nip44: {
-    async encrypt(peer, plaintext) {
+    async encrypt(
+      peer: string,
+      plaintext: string
+    ): Promise<string | ContentScriptMessageResponseError> {
       return window.nostr._call('nip44.encrypt', { peer, plaintext });
     },
 
-    async decrypt(peer, ciphertext) {
+    async decrypt(
+      peer: string,
+      ciphertext: string
+    ): Promise<string | ContentScriptMessageResponseError> {
       return window.nostr._call('nip44.decrypt', { peer, ciphertext });
     }
   },
 
-  _call(type, params) {
-    let id = Math.random().toString().slice(-4);
+  _call(type: string, params: PromptParams) {
+    const id = Math.random().toString().slice(-4);
     console.log(
       '%c[nos2x-fox:%c' +
         id +

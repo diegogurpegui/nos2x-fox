@@ -1,3 +1,5 @@
+import { Event, VerifiedEvent } from 'nostr-tools';
+
 export const KindNames = {
   '0': 'Metadata',
   '1': 'Text',
@@ -75,7 +77,20 @@ export type PromptResponse = {
 };
 
 export type PromptParams = {
-  event?: {
-    kind: number;
+  peer: string;
+  plaintext?: string;
+  ciphertext?: string;
+  event?: Event;
+};
+
+export type ContentScriptMessageResponseError = {
+  error: {
+    message: string;
+    stack?: any;
   };
 };
+export type ContentScriptMessageResponse =
+  | ContentScriptMessageResponseError
+  | string
+  | VerifiedEvent
+  | RelaysConfig;

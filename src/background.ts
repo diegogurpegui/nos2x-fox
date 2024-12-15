@@ -1,9 +1,21 @@
 import browser from 'webextension-polyfill';
-import { validateEvent, finalizeEvent, getPublicKey, nip44 } from 'nostr-tools';
+import {
+  validateEvent,
+  finalizeEvent,
+  getPublicKey,
+  nip44,
+  VerifiedEvent
+} from 'nostr-tools';
 import { nip04 } from 'nostr-tools';
 
 import * as Storage from './storage';
-import { AuthorizationCondition, PromptResponse } from './types';
+import {
+  AuthorizationCondition,
+  ContentScriptMessageResponse,
+  PromptParams,
+  PromptResponse,
+  RelaysConfig
+} from './types';
 import { PERMISSIONS_REQUIRED, convertHexToUint8Array } from './common';
 import { LRUCache } from './LRUCache';
 
@@ -20,9 +32,9 @@ browser.runtime.onMessage.addListener((message, sender) => {
 });
 
 browser.runtime.onMessageExternal.addListener(
-  async ({ type, params }, sender) => {
+  async ({ type, params }: { type: string; params: PromptParams }, sender) => {
     let extensionId = new URL(sender.url).host;
-    handleContentScriptMessage({ type, params, host: extensionId });
+    return handleContentScriptMessage({ type, params, host: extensionId });
   }
 );
 
@@ -40,7 +52,23 @@ browser.windows.onRemoved.addListener(_windowId => {
   }
 });
 
-async function handleContentScriptMessage({ type, params, host }) {
+/**
+ * Handles a message from the content script by processing the specified type and parameters.
+ *
+ * @param type - The type of operation to be performed.
+ * @param params - The prompt parameters required for the operation.
+ * @param host - The host from which the message originated.
+ * @returns A response object which can be an Error, a pubkey, a VerifiedEvent or a RelaysConfig.
+ */
+async function handleContentScriptMessage({
+  type,
+  params,
+  host
+}: {
+  type: string;
+  params: PromptParams;
+  host: string;
+}): Promise<ContentScriptMessageResponse> {
   let level = await readPermissionLevel(host);
 
   if (level >= PERMISSIONS_REQUIRED[type]) {
@@ -56,7 +84,9 @@ async function handleContentScriptMessage({ type, params, host }) {
       if (!isAllowed) {
         // not authorized, stop here
         return {
-          error: `Insufficient permissions, required ${PERMISSIONS_REQUIRED[type]}`
+          error: {
+            message: `Insufficient permissions, required ${PERMISSIONS_REQUIRED[type]}`
+          }
         };
       }
     } catch (error) {
@@ -67,7 +97,7 @@ async function handleContentScriptMessage({ type, params, host }) {
 
   let privateKey = await Storage.readActivePrivateKey();
   if (!privateKey) {
-    return { error: 'no private key found' };
+    return { error: { message: 'no private key found' } };
   }
 
   // privateKey is in hexa, we must convert to UInt8Array for working
@@ -83,10 +113,14 @@ async function handleContentScriptMessage({ type, params, host }) {
         return relays || {};
       }
       case 'signEvent': {
+        if (!params.event) {
+          return { error: { message: 'empty event' } };
+        }
+
         const activePubKey = getPublicKey(sk);
         // check if the pubkey used corresponds to the active profile
         // only do it when pubkey is not empty, since some sites don't specify it
-        if (params.event.pubkey && params.event.pubkey !== activePubKey) {
+        if (params.event?.pubkey && params.event.pubkey !== activePubKey) {
           console.warn(
             `Pubkey used (${params.event.pubkey}) doesn't match the active profile (${activePubKey}).`
           );
@@ -101,21 +135,24 @@ async function handleContentScriptMessage({ type, params, host }) {
       }
       case 'nip04.encrypt': {
         let { peer, plaintext } = params;
-        return nip04.encrypt(sk, peer, plaintext);
+        return nip04.encrypt(sk, peer, plaintext as string);
       }
       case 'nip04.decrypt': {
         let { peer, ciphertext } = params;
-        return nip04.decrypt(sk, peer, ciphertext);
+        return nip04.decrypt(sk, peer, ciphertext as string);
       }
       case 'nip44.encrypt': {
         const { peer, plaintext } = params;
         const key = getSharedSecret(sk, peer);
-        return nip44.v2.encrypt(plaintext, key);
+        return nip44.v2.encrypt(plaintext as string, key);
       }
       case 'nip44.decrypt': {
         const { peer, ciphertext } = params;
         const key = getSharedSecret(sk, peer);
-        return nip44.v2.decrypt(ciphertext, key);
+        return nip44.v2.decrypt(ciphertext as string, key);
+      }
+      default: {
+        return { error: { message: `Uunknown type "${type}"` } };
       }
     }
   } catch (error) {
@@ -126,7 +163,7 @@ async function handleContentScriptMessage({ type, params, host }) {
 function handlePromptMessage(
   { id, condition, host, level }: PromptResponse,
   sender
-) {
+): void {
   try {
     switch (condition) {
       case AuthorizationCondition.FOREVER:
@@ -165,11 +202,11 @@ function handlePromptMessage(
   }
 }
 
-function promptPermission(host, level, params) {
+function promptPermission(host: string, level: number, params: PromptParams) {
   let id = Math.random().toString().slice(4);
   let qs = new URLSearchParams({
     host,
-    level,
+    level: String(level),
     id,
     params: JSON.stringify(params)
   });
