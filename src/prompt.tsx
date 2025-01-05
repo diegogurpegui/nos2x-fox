@@ -74,22 +74,18 @@ function Prompt() {
   }
 
   function getKindDescription(kind: number) {
-    for (const kindCode in KindNames) {
-      if (kindCode.includes('-')) {
-        // check whether the kind is within a recognized range
-        const range = kindCode.split('-');
-        if (kind >= parseInt(range[0]) && kind <= parseInt(range[1])) {
-          return KindNames[kindCode];
-        }
-      } else {
-        // check whether the kind is a specific value
-        const kindCodeN = parseInt(kindCode);
-        if (kind == kindCodeN) {
-          return KindNames[kindCode];
-        }
-      }
+    // 1. Try to find the specific kind key
+    const kindEntry = KindNames[kind];
+    if (kindEntry) {
+      return kindEntry;
     }
-    return null;
+
+    // 2. Fallback to find the range that the kind belongs to
+    const rangeEntry = Object.entries(KindNames).find(([key]) => {
+      const [start, end] = key.split('-').map(Number);
+      return kind >= start && kind <= (end ?? start);
+    });
+    return rangeEntry ? rangeEntry[1] : null;
   }
 
   return (
