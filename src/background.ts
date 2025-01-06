@@ -1,48 +1,53 @@
 import browser from 'webextension-polyfill';
-import {
-  validateEvent,
-  finalizeEvent,
-  getPublicKey,
-  nip44,
-  VerifiedEvent
-} from 'nostr-tools';
+import { validateEvent, finalizeEvent, getPublicKey, nip44 } from 'nostr-tools';
 import { nip04 } from 'nostr-tools';
 
 import * as Storage from './storage';
 import {
   AuthorizationCondition,
+  ContentMessageArgs,
   ContentScriptMessageResponse,
   PromptParams,
-  PromptResponse,
-  RelaysConfig
+  PromptResponse
 } from './types';
 import { PERMISSIONS_REQUIRED, convertHexToUint8Array } from './common';
 import { LRUCache } from './LRUCache';
+import PromptManager from './PromptManager';
 
-let openPrompt: { resolve: Function; reject: Function } | null = null;
+/** Map to keep track of open prompts so we can properly capture the responses and close them */
+const openPromptMap: Record<
+  string,
+  { id: string; windowId?: number; resolve: Function; reject: Function }
+> = {};
 
 browser.runtime.onMessage.addListener((message, sender) => {
-  let { prompt } = message;
+  let { prompt } = message as PromptResponse;
 
   if (prompt) {
-    handlePromptMessage(message, sender);
+    handlePromptMessage(message as PromptResponse, sender);
   } else {
-    return handleContentScriptMessage(message);
+    return handleContentScriptMessage(message as ContentMessageArgs);
   }
 });
 
-browser.runtime.onMessageExternal.addListener(
-  async ({ type, params }: { type: string; params: PromptParams }, sender) => {
-    let extensionId = new URL(sender.url).host;
-    return handleContentScriptMessage({ type, params, host: extensionId });
-  }
-);
+browser.runtime.onMessageExternal.addListener(async (message, sender) => {
+  const { type, params } = message as ContentMessageArgs;
+  let extensionId = new URL(sender.url ?? '').host;
+  return handleContentScriptMessage({ type, params, host: extensionId });
+});
 
 browser.windows.onRemoved.addListener(_windowId => {
-  if (openPrompt) {
+  // Search an open prompts with this window ID
+  const openPrompts = Object.values(openPromptMap).filter(
+    ({ windowId }) => windowId === _windowId
+  );
+
+  // handle the rejection on all of them
+  for (const openPrompt of openPrompts) {
     // If the window is closed, then take it as a Reject
     handlePromptMessage(
       {
+        id: openPrompt.id,
         prompt: true,
         condition: AuthorizationCondition.REJECT,
         host: null
@@ -64,11 +69,7 @@ async function handleContentScriptMessage({
   type,
   params,
   host
-}: {
-  type: string;
-  params: PromptParams;
-  host: string;
-}): Promise<ContentScriptMessageResponse> {
+}: ContentMessageArgs): Promise<ContentScriptMessageResponse> {
   let level = await readPermissionLevel(host);
 
   if (level >= PERMISSIONS_REQUIRED[type]) {
@@ -160,10 +161,16 @@ async function handleContentScriptMessage({
   }
 }
 
-function handlePromptMessage(
+async function handlePromptMessage(
   { id, condition, host, level }: PromptResponse,
   sender
-): void {
+): Promise<void> {
+  const openPrompt = openPromptMap[id];
+  if (!openPrompt) {
+    console.warn('Message from unrecognized prompt: ', id);
+    return;
+  }
+
   try {
     switch (condition) {
       case AuthorizationCondition.FOREVER:
@@ -171,64 +178,94 @@ function handlePromptMessage(
       case AuthorizationCondition.EXPIRABLE_1H:
       case AuthorizationCondition.EXPIRABLE_8H:
         if (level) {
-          openPrompt?.resolve?.(true);
+          openPrompt.resolve?.(true);
           Storage.addActivePermission(host ?? '', condition, level);
         } else {
           console.warn('No authorization level provided');
         }
         break;
       case AuthorizationCondition.SINGLE:
-        openPrompt?.resolve?.(true);
+        openPrompt.resolve?.(true);
         break;
       case AuthorizationCondition.REJECT:
-        openPrompt?.resolve?.(false);
+        openPrompt.resolve?.(false);
         break;
     }
 
-    openPrompt = null;
+    // remove the prompt from the map
+    delete openPromptMap[id];
 
     // close prompt
     if (sender) {
-      if (browser.windows) {
-        browser.windows.remove(sender.tab.windowId);
-      } else {
-        // Android Firefox
-        browser.tabs.remove(sender.tab.id);
+      const openPrompts = await PromptManager.get();
+
+      // only close the prompt if there is no other prompt pending
+      if (openPrompts.length == 1) {
+        if (browser.windows) {
+          await browser.windows.remove(sender.tab.windowId);
+        } else {
+          // Android Firefox
+          await browser.tabs.remove(sender.tab.id);
+        }
       }
+
+      // remove the prompt from the storage
+      await PromptManager.remove(id);
     }
   } catch (error) {
     console.error('Error handling prompt response.', error);
-    openPrompt?.reject?.(error);
+    openPrompt.reject?.(error);
   }
 }
 
 function promptPermission(host: string, level: number, params: PromptParams) {
   let id = Math.random().toString().slice(4);
-  let qs = new URLSearchParams({
-    host,
-    level: String(level),
-    id,
-    params: JSON.stringify(params)
-  });
 
   return new Promise((resolve, reject) => {
-    const url = `${browser.runtime.getURL('prompt.html')}?${qs.toString()}`;
-    if (browser.windows) {
-      browser.windows.create({
-        url,
-        type: 'popup',
-        width: 600,
-        height: 400
+    const promptPageURL = `${browser.runtime.getURL('prompt.html')}`;
+
+    let openPromptPromise: Promise<browser.Windows.Window | browser.Tabs.Tab>;
+
+    // check if there is already a prompt popup window open
+    if (Object.values(openPromptMap).length > 0) {
+      // simulate the promise using the existing window id
+      openPromptPromise = new Promise((resolve, reject) => {
+        const openPrompt = Object.values(openPromptMap).find(
+          ({ windowId }) => windowId
+        );
+        if (openPrompt) {
+          browser.windows.get(openPrompt.windowId as number).then(win => {
+            resolve(win);
+          });
+        } else {
+          reject();
+        }
       });
     } else {
-      // Android Firefox
-      browser.tabs.create({
-        url,
-        active: true
-      });
+      // open the popup window
+      if (browser.windows) {
+        openPromptPromise = browser.windows.create({
+          url: promptPageURL,
+          type: 'popup',
+          width: 600,
+          height: 400
+        });
+      } else {
+        // Android Firefox
+        openPromptPromise = browser.tabs.create({
+          url: promptPageURL,
+          active: true
+        });
+      }
     }
 
-    openPrompt = { resolve, reject };
+    // when the prompt is opened (or found open), add it to the queue
+    openPromptPromise.then(win => {
+      // add the prompt to the local map
+      openPromptMap[id] = { id, windowId: win.id, resolve, reject };
+      // add to the storage
+      PromptManager.add({ id, windowId: win.id, host, level, params });
+    });
   });
 }
 

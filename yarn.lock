@@ -767,6 +767,16 @@
   dependencies:
     csstype "^3.0.2"
 
+"@types/web@^0.0.188":
+  version "0.0.188"
+  resolved "https://registry.yarnpkg.com/@types/web/-/web-0.0.188.tgz#ae97a6cf2b7e957ae6cd2cdb8cd3910e8b217b19"
+  integrity sha512-dKowKMo4P0W6f2U5i66uJ+/MlSHzBnznI0ExP1xnpcF/9/CJQT4VYvIDqz7ocWDvd0pB1QPgjOe4dVSycQrbuA==
+
+"@types/webextension-polyfill@^0.12.1":
+  version "0.12.1"
+  resolved "https://registry.yarnpkg.com/@types/webextension-polyfill/-/webextension-polyfill-0.12.1.tgz#8dae244fe094cbb541005362e8e22f16671f6054"
+  integrity sha512-xPTFWwQ8BxPevPF2IKsf4hpZNss4LxaOLZXypQH4E63BDLmcwX/RMGdI4tB4VO4Nb6xDBH3F/p4gz4wvof1o9w==
+
 "@types/yauzl@2.10.3":
   version "2.10.3"
   resolved "https://registry.yarnpkg.com/@types/yauzl/-/yauzl-2.10.3.tgz#e9b2808b4f109504a03cda958259876f61017999"

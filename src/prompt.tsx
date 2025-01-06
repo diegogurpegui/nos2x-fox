@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import browser from 'webextension-polyfill';
 import { createRoot } from 'react-dom/client';
 
@@ -10,6 +10,7 @@ import {
 import {
   AuthorizationCondition,
   KindNames,
+  OpenPromptItem,
   ProfileConfig,
   PromptParams,
   PromptResponse
@@ -18,38 +19,22 @@ import * as Storage from './storage';
 
 import ShieldCheckmarkIcon from './assets/icons/shield-checkmark-outline.svg';
 import TimerIcon from './assets/icons/timer-outline.svg';
+import CaretBackIcon from './assets/icons/caret-back-outline.svg';
+import CaretForwradIcon from './assets/icons/caret-forward-outline.svg';
 import CheckmarkCircleIcon from './assets/icons/checkmark-circle-outline.svg';
 import CloseCircleIcon from './assets/icons/close-circle-outline.svg';
 import { getPublicKey, nip19 } from 'nostr-tools';
+import PromptManager from './PromptManager';
 
 function Prompt() {
-  const [activeProfile, setActiveProfile] = React.useState<ProfileConfig>();
-  const [activePubKeyNIP19, setActivePubKeyNIP19] = React.useState<string>('');
+  const [activeProfile, setActiveProfile] = useState<ProfileConfig>();
+  const [activePubKeyNIP19, setActivePubKeyNIP19] = useState<string>('');
 
-  const queryString = new URLSearchParams(location.search);
-  const id = queryString.get('id');
-  const host = queryString.get('host');
-  const level = parseInt(queryString.get('level') as string);
+  const [openPrompts, setOpenPromps] = useState<OpenPromptItem[]>();
+  const [activePromptIndex, setActivePrompt] = useState<number>(0);
 
-  let params: PromptParams | null = null;
-  let kindName: string | null = null;
-  let kind: number | null = null;
-
-  try {
-    params = JSON.parse(queryString.get('params') as string) as PromptParams;
-    if (params) {
-      if (params.event) {
-        kind = params.event.kind;
-        kindName = getKindDescription(kind);
-      } else {
-        console.warn('params.event is not defined');
-      }
-    } else {
-      console.error('Param is null');
-    }
-  } catch (err) {
-    console.error('Error parsing params.', err);
-  }
+  const [kindName, setKindName] = useState<string | null>(null);
+  const [kind, setKind] = useState<number | null>(null);
 
   useEffect(() => {
     Storage.getActiveProfile().then(profile => {
@@ -57,23 +42,64 @@ function Prompt() {
       const pkUint = convertHexToUint8Array(profile.privateKey);
       setActivePubKeyNIP19(nip19.npubEncode(getPublicKey(pkUint)));
     });
-  });
 
-  function authorizeHandler(condition) {
-    return function (ev) {
-      ev.preventDefault();
-      const promptResponse: PromptResponse = {
-        prompt: true,
-        id,
-        host,
-        level,
-        condition
-      };
-      browser.runtime.sendMessage(promptResponse);
+    PromptManager.get().then(prompts => {
+      setOpenPromps(prompts);
+      if (prompts.length) {
+        setActivePrompt(0);
+      }
+    });
+    PromptManager.addChangeListener(changedPromptsCallback);
+
+    return () => {
+      PromptManager.removeChangeListener(changedPromptsCallback);
     };
+  }, []);
+
+  /** Pepare params of event */
+  useEffect(() => {
+    try {
+      if (openPrompts?.[activePromptIndex]?.params) {
+        const params = openPrompts[activePromptIndex].params;
+        if (params.event) {
+          setKind(params.event.kind);
+          setKindName(getKindDescription(params.event.kind));
+        } else {
+          console.warn('params.event is not defined');
+        }
+      } else {
+        console.error('Param is null');
+      }
+    } catch (err) {
+      console.error('Error parsing params.', err);
+    }
+  }, [activePromptIndex, openPrompts]);
+
+  useEffect(() => {
+    // if there are more than one prompt, then set the onbeforeunload
+    if (openPrompts && openPrompts.length > 1) {
+      window.addEventListener('beforeunload', windowCloseHandler);
+
+      // clean it up, if the dirty state changes
+      return () => {
+        window.removeEventListener('beforeunload', windowCloseHandler);
+      };
+    }
+
+    // since this is not dirty, don't do anything
+    return () => {};
+  }, [openPrompts]);
+
+  function changedPromptsCallback(prompts) {
+    setOpenPromps(prompts);
   }
 
-  function getKindDescription(kind: number) {
+  // the handler for actually showing the prompt
+  function windowCloseHandler(event: BeforeUnloadEvent) {
+    event.preventDefault();
+  }
+
+  function getKindDescription(kind: number): string | null {
     // 1. Try to find the specific kind key
     const kindEntry = KindNames[kind];
     if (kindEntry) {
@@ -88,10 +114,70 @@ function Prompt() {
     return rangeEntry ? rangeEntry[1] : null;
   }
 
+  function authorizeHandler(condition) {
+    return function (ev) {
+      ev.preventDefault();
+
+      // if no promps this shouldn't be valid (it won't be called anyway)
+      if (!openPrompts || !openPrompts.length) {
+        return;
+      }
+
+      const promptResponse: PromptResponse = {
+        prompt: true,
+        id: openPrompts[activePromptIndex].id,
+        host: openPrompts[activePromptIndex].host,
+        level: openPrompts[activePromptIndex].level,
+        condition
+      };
+      browser.runtime.sendMessage(promptResponse);
+    };
+  }
+
+  function movePrompt(direction: number) {
+    if (openPrompts && openPrompts.length > 0) {
+      let newIndex = activePromptIndex + direction;
+      if (newIndex < 0) {
+        newIndex = 0;
+      }
+      if (newIndex >= openPrompts.length) {
+        newIndex = openPrompts.length - 1;
+      }
+      setActivePrompt(newIndex);
+    }
+  }
+
+  if (!openPrompts || !openPrompts.length) {
+    return <div>There is no action to authorize</div>;
+  }
+
   return (
     <>
       <div>
-        <h1 className="prompt-host">{host}</h1>
+        {openPrompts.length > 1 && (
+          <div className="prompt-navigator">
+            <button
+              className="button-onlyicon"
+              disabled={activePromptIndex === 0}
+              onClick={movePrompt.bind(null, -1)}
+              title="Previous"
+            >
+              <CaretBackIcon />
+            </button>
+            <span>
+              {activePromptIndex + 1} / {openPrompts.length}
+            </span>
+            <button
+              className="button-onlyicon"
+              disabled={activePromptIndex === openPrompts.length - 1}
+              onClick={movePrompt.bind(null, 1)}
+              title="Next"
+            >
+              <CaretForwradIcon />
+            </button>
+          </div>
+        )}
+        <h1 className="prompt-host">{openPrompts[activePromptIndex].host}</h1>
         <p>
           Signing with profile:{' '}
           <strong>
@@ -111,9 +197,11 @@ function Prompt() {
         </p>
         <p>is requesting your permission to:</p>
         <ul className="prompt-requests">
-          {getAllowedCapabilities(level).map(cap => (
-            <li key={cap}>{cap}</li>
-          ))}
+          {getAllowedCapabilities(openPrompts[activePromptIndex].level).map(
+            cap => (
+              <li key={cap}>{cap}</li>
+            )
+          )}
         </ul>
       </div>
       <div className="prompt-action-buttons">
@@ -158,11 +246,13 @@ function Prompt() {
           <CloseCircleIcon /> Reject
         </button>
       </div>
-      {params && (
+      {openPrompts[activePromptIndex].params && (
         <>
-          <p>now acting on</p>
+          <p>Acting on:</p>
           <pre className="prompt-request-raw">
-            <code>{JSON.stringify(params, null, 2)}</code>
+            <code>
+              {JSON.stringify(openPrompts[activePromptIndex].params, null, 2)}
+            </code>
           </pre>
         </>
       )}

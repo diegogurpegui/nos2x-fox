@@ -208,6 +208,20 @@ button,
   &:hover {
     background-color: transparent;
   }
+
+  &:disabled {
+    background-color: transparent;
+    color: $color-primary-disabled;
+    cursor: not-allowed;
+
+    svg {
+      color: $color-primary-disabled;
+      path,
+      rect {
+        stroke: $color-primary-disabled;
+      }
+    }
+  }
 }
 
 .button-group {
@@ -512,6 +526,19 @@ input,
 
 /* ---- Prompt ---- */
 .prompt-main {
+  .prompt-navigator {
+    position: absolute;
+    top: 1em;
+    right: 1em;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+
+    > span {
+      white-space: nowrap;
+    }
+  }
+
   .prompt-host {
     display: 'block';
     text-align: 'center';

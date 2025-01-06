@@ -32,7 +32,8 @@ export const KindNames = {
 
 export enum ConfigurationKeys {
   PRIVATE_KEY = 'private_key',
-  PROFILES = 'profiles'
+  PROFILES = 'profiles',
+  OPEN_PROMPTS = 'open_prompts'
 }
 
 export type RelaysConfig = {
@@ -70,9 +71,11 @@ export enum AuthorizationCondition {
 }
 
 export type PromptResponse = {
+  /** ID assigned to the prompt */
+  id: string;
+  /** Indicates whether this message is a prompt */
   prompt: boolean;
   condition: AuthorizationCondition;
-  id?;
   host: string | null;
   level?: number;
 };
@@ -82,6 +85,12 @@ export type PromptParams = {
   plaintext?: string;
   ciphertext?: string;
   event?: Event;
+};
+
+export type ContentMessageArgs = {
+  type: string;
+  params: PromptParams;
+  host: string;
 };
 
 export type ContentScriptMessageResponseError = {
@@ -95,3 +104,11 @@ export type ContentScriptMessageResponse =
   | string
   | VerifiedEvent
   | RelaysConfig;
+
+export type OpenPromptItem = {
+  id: string;
+  windowId?: number;
+  host: string;
+  level: number;
+  params: PromptParams;
+};

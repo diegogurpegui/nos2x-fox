@@ -4,6 +4,7 @@ import { getPublicKey } from 'nostr-tools';
 import {
   AuthorizationCondition,
   ConfigurationKeys,
+  OpenPromptItem,
   PermissionConfig,
   ProfileConfig,
   ProfilesConfig,
@@ -13,7 +14,7 @@ import { convertHexToUint8Array } from './common';
 
 export async function readActivePrivateKey(): Promise<string> {
   const data = await browser.storage.local.get(ConfigurationKeys.PRIVATE_KEY);
-  return data[ConfigurationKeys.PRIVATE_KEY];
+  return data[ConfigurationKeys.PRIVATE_KEY] as string;
 }
 export async function updateActivePrivateKey(privateKey: string) {
   if (privateKey == null || privateKey == '') {
@@ -112,9 +113,11 @@ export async function removePermissions(
   return updateProfile(profile);
 }
 
+//#region Profiles >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 export async function readProfiles(): Promise<ProfilesConfig> {
-  let { profiles = {} }: { [ConfigurationKeys.PROFILES]: ProfilesConfig } =
-    await browser.storage.local.get(ConfigurationKeys.PROFILES);
+  const { profiles = {} } = (await browser.storage.local.get(
+    ConfigurationKeys.PROFILES
+  )) as { [ConfigurationKeys.PROFILES]: ProfilesConfig };
 
   const pubKeys = Object.keys(profiles);
   // if there are no profiles, check if there's an active profile
@@ -226,6 +229,37 @@ export async function getActiveProfile(): Promise<ProfileConfig> {
   } else {
     throw new Error('There is no active private key.');
   }
+}
+//#endregion Profiles <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+
+export async function readOpenPrompts(): Promise<OpenPromptItem[]> {
+  const openPromptsData = await browser.storage.local.get(
+    ConfigurationKeys.OPEN_PROMPTS
+  );
+  return openPromptsData[ConfigurationKeys.OPEN_PROMPTS] as OpenPromptItem[];
+}
+
+export async function updateOpenPrompts(openPrompts: OpenPromptItem[]) {
+  await browser.storage.local.set({
+    [ConfigurationKeys.OPEN_PROMPTS]: openPrompts
+  });
+
+  return openPrompts;
+}
+
+export async function addOpenPromptChangeListener(
+  callback: (newOpenPrompts: OpenPromptItem[]) => void
+) {
+  browser.storage.onChanged.addListener(changes => {
+    if (changes[ConfigurationKeys.OPEN_PROMPTS]) {
+      callback(
+        changes[ConfigurationKeys.OPEN_PROMPTS].newValue as OpenPromptItem[]
+      );
+    }
+  });
+}
+export async function removeOpenPromptChangeListener(listener) {
+  browser.storage.onChanged.removeListener(listener);
 }
 
 /**

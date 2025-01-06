@@ -16,7 +16,7 @@ esbuild
     bundle: true,
     entryPoints: {
       // code
-      background: './src/background.js',
+      background: './src/background.ts',
       'content-script': './src/content-script.js',
       'nostr-provider': './src/nostr-provider.js',
       types: './src/types.ts',
