@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import browser from 'webextension-polyfill';
 import { createRoot } from 'react-dom/client';
+import { getPublicKey, nip19 } from 'nostr-tools';
 
 import {
   convertHexToUint8Array,
@@ -10,9 +11,7 @@ import {
 import {
   AuthorizationCondition,
   KindNames,
-  OpenPromptItem,
   ProfileConfig,
-  PromptParams,
   PromptResponse
 } from './types';
 import * as Storage from './storage';
@@ -23,18 +22,21 @@ import CaretBackIcon from './assets/icons/caret-back-outline.svg';
 import CaretForwradIcon from './assets/icons/caret-forward-outline.svg';
 import CheckmarkCircleIcon from './assets/icons/checkmark-circle-outline.svg';
 import CloseCircleIcon from './assets/icons/close-circle-outline.svg';
-import { getPublicKey, nip19 } from 'nostr-tools';
-import PromptManager from './PromptManager';
+import { useOpenPrompts } from './PromptManager';
 
 function Prompt() {
+  const openPrompts = useOpenPrompts();
+
   const [activeProfile, setActiveProfile] = useState<ProfileConfig>();
   const [activePubKeyNIP19, setActivePubKeyNIP19] = useState<string>('');
 
-  const [openPrompts, setOpenPromps] = useState<OpenPromptItem[]>();
+  // const [openPrompts, setOpenPromps] = useState<OpenPromptItem[]>();
   const [activePromptIndex, setActivePrompt] = useState<number>(0);
 
   const [kindName, setKindName] = useState<string | null>(null);
   const [kind, setKind] = useState<number | null>(null);
+
+  const [showCloseConfirmation, setShowCloseConfirmation] = useState(false);
 
   useEffect(() => {
     Storage.getActiveProfile().then(profile => {
@@ -42,18 +44,6 @@ function Prompt() {
       const pkUint = convertHexToUint8Array(profile.privateKey);
       setActivePubKeyNIP19(nip19.npubEncode(getPublicKey(pkUint)));
     });
-
-    PromptManager.get().then(prompts => {
-      setOpenPromps(prompts);
-      if (prompts.length) {
-        setActivePrompt(0);
-      }
-    });
-    PromptManager.addChangeListener(changedPromptsCallback);
-
-    return () => {
-      PromptManager.removeChangeListener(changedPromptsCallback);
-    };
   }, []);
 
   /** Pepare params of event */
@@ -78,11 +68,18 @@ function Prompt() {
   useEffect(() => {
     // if there are more than one prompt, then set the onbeforeunload
     if (openPrompts && openPrompts.length > 1) {
-      window.addEventListener('beforeunload', windowCloseHandler);
+      const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+        if (!showCloseConfirmation) {
+          event.preventDefault();
+          event.returnValue = ''; // Required for Chrome
+          setShowCloseConfirmation(true);
+        }
+      };
+      window.addEventListener('beforeunload', handleBeforeUnload);
 
       // clean it up, if the dirty state changes
       return () => {
-        window.removeEventListener('beforeunload', windowCloseHandler);
+        window.removeEventListener('beforeunload', handleBeforeUnload);
       };
     }
 
@@ -90,13 +87,13 @@ function Prompt() {
     return () => {};
   }, [openPrompts]);
 
-  function changedPromptsCallback(prompts) {
-    setOpenPromps(prompts);
+  function handleCloseConfirm() {
+    // Actually close the window
+    window.close();
   }
 
-  // the handler for actually showing the prompt
-  function windowCloseHandler(event: BeforeUnloadEvent) {
-    event.preventDefault();
+  function handleCloseCancel() {
+    setShowCloseConfirmation(false);
   }
 
   function getKindDescription(kind: number): string | null {
@@ -148,11 +145,28 @@ function Prompt() {
   }
 
   if (!openPrompts || !openPrompts.length) {
-    return <div>There is no action to authorize</div>;
+    return <div className="p-2">There is no action to authorize</div>;
   }
 
   return (
     <>
+      {/* Close confirmation modal */}
+      {showCloseConfirmation && (
+        <div className="close-confirm-dialog-wrapper">
+          <div className="close-confirm-dialog">
+            <p>
+              If you close this window, all prompts will be taken as rejected.
+            </p>
+            <div className="action-buttons">
+              <button onClick={handleCloseCancel}>Cancel</button>
+              <button className="button-danger" onClick={handleCloseConfirm}>
+                Reject all
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div>
         {openPrompts.length > 1 && (
           <div className="prompt-navigator">

@@ -18,7 +18,8 @@ $color-success-dark: #1c5e32;
 $color-success-light: #46f07f;
 $background-color: #ffffff;
 
-$button-radius: 0.3em;
+$radius-default: 0.3em;
+$button-radius: $radius-default;
 
 $font-family: 'Prompt', Arial, Helvetica, sans-serif;
 $font-size: 12pt;
@@ -566,5 +567,37 @@ input,
   .prompt-action-buttons > * {
     flex: 1 1 auto;
     margin: 0.5em;
+  }
+
+  .close-confirm-dialog-wrapper {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: end; // bottom of the window
+    z-index: 100;
+
+    .close-confirm-dialog {
+      width: 100%;
+      background-color: white;
+      padding: 20px;
+      border-top-left-radius: $radius-default;
+      border-top-right-radius: $radius-default;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+
+      .action-buttons {
+        display: flex;
+        flex-direction: row;
+        justify-content: end;
+
+        > *:not(:first-child) {
+          margin-left: 1em;
+        }
+      }
+    }
   }
 }

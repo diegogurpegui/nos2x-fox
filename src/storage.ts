@@ -236,30 +236,36 @@ export async function readOpenPrompts(): Promise<OpenPromptItem[]> {
   const openPromptsData = await browser.storage.local.get(
     ConfigurationKeys.OPEN_PROMPTS
   );
-  return openPromptsData[ConfigurationKeys.OPEN_PROMPTS] as OpenPromptItem[];
+  // parse from JSON string
+  const openPromptStr = (openPromptsData[ConfigurationKeys.OPEN_PROMPTS] ??
+    '[]') as string;
+  return JSON.parse(openPromptStr) as OpenPromptItem[];
 }
 
 export async function updateOpenPrompts(openPrompts: OpenPromptItem[]) {
+  // stringify to JSON to make the change listeners fire (Firefox bug?)
+  const openPromptsStr = JSON.stringify(openPrompts);
   await browser.storage.local.set({
-    [ConfigurationKeys.OPEN_PROMPTS]: openPrompts
+    [ConfigurationKeys.OPEN_PROMPTS]: openPromptsStr
   });
 
   return openPrompts;
 }
 
-export async function addOpenPromptChangeListener(
+export function addOpenPromptChangeListener(
   callback: (newOpenPrompts: OpenPromptItem[]) => void
 ) {
-  browser.storage.onChanged.addListener(changes => {
+  return browser.storage.onChanged.addListener(changes => {
+    // only notify if there's a change with Open Prompts
     if (changes[ConfigurationKeys.OPEN_PROMPTS]) {
-      callback(
-        changes[ConfigurationKeys.OPEN_PROMPTS].newValue as OpenPromptItem[]
-      );
+      const newValueStr = (changes[ConfigurationKeys.OPEN_PROMPTS].newValue ??
+        '[]') as string;
+      callback(JSON.parse(newValueStr) as OpenPromptItem[]);
     }
   });
 }
-export async function removeOpenPromptChangeListener(listener) {
-  browser.storage.onChanged.removeListener(listener);
+export function removeOpenPromptChangeListener(listener) {
+  return browser.storage.onChanged.removeListener(listener);
 }
 
 /**

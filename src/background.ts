@@ -7,6 +7,7 @@ import {
   AuthorizationCondition,
   ContentMessageArgs,
   ContentScriptMessageResponse,
+  OpenPromptItem,
   PromptParams,
   PromptResponse
 } from './types';
@@ -37,24 +38,32 @@ browser.runtime.onMessageExternal.addListener(async (message, sender) => {
 });
 
 browser.windows.onRemoved.addListener(_windowId => {
-  // Search an open prompts with this window ID
+  // Search the open prompts with this window ID
   const openPrompts = Object.values(openPromptMap).filter(
     ({ windowId }) => windowId === _windowId
   );
 
-  // handle the rejection on all of them
-  for (const openPrompt of openPrompts) {
-    // If the window is closed, then take it as a Reject
-    handlePromptMessage(
-      {
-        id: openPrompt.id,
-        prompt: true,
-        condition: AuthorizationCondition.REJECT,
-        host: null
-      },
-      null
-    );
-  }
+  console.debug(
+    `Window ${_windowId} closed. Closing ${openPrompts.length} prompts.`
+  );
+
+  // Handle the rejection on all of them
+  // We need to do it sequentially, hence the async trick
+  const closeAllAsync = async () => {
+    for (const openPrompt of openPrompts) {
+      // Since the window is closed, then take it as a Reject
+      await handlePromptMessage(
+        {
+          id: openPrompt.id,
+          prompt: true,
+          condition: AuthorizationCondition.REJECT,
+          host: null
+        },
+        null
+      );
+    }
+  };
+  closeAllAsync(); // now run
 });
 
 /**
@@ -199,7 +208,7 @@ async function handlePromptMessage(
     if (sender) {
       const openPrompts = await PromptManager.get();
 
-      // only close the prompt if there is no other prompt pending
+      // only close the prompt window if there is no other prompt pending
       if (openPrompts.length == 1) {
         if (browser.windows) {
           await browser.windows.remove(sender.tab.windowId);
@@ -208,17 +217,20 @@ async function handlePromptMessage(
           await browser.tabs.remove(sender.tab.id);
         }
       }
-
-      // remove the prompt from the storage
-      await PromptManager.remove(id);
     }
+    // remove the prompt from the storage
+    await PromptManager.remove(id);
   } catch (error) {
     console.error('Error handling prompt response.', error);
     openPrompt.reject?.(error);
   }
 }
 
-function promptPermission(host: string, level: number, params: PromptParams) {
+function promptPermission(
+  host: string,
+  level: number,
+  params: PromptParams
+): Promise<boolean> {
   let id = Math.random().toString().slice(4);
 
   return new Promise((resolve, reject) => {
@@ -228,6 +240,7 @@ function promptPermission(host: string, level: number, params: PromptParams) {
 
     // check if there is already a prompt popup window open
     if (Object.values(openPromptMap).length > 0) {
+      console.debug('There is already a prompt popup window open.');
       // simulate the promise using the existing window id
       openPromptPromise = new Promise((resolve, reject) => {
         const openPrompt = Object.values(openPromptMap).find(
@@ -242,6 +255,7 @@ function promptPermission(host: string, level: number, params: PromptParams) {
         }
       });
     } else {
+      console.debug('There is no prompt popup window open. Creating one.');
       // open the popup window
       if (browser.windows) {
         openPromptPromise = browser.windows.create({
