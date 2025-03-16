@@ -115,9 +115,9 @@ export async function removePermissions(
 
 //#region Profiles >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 export async function readProfiles(): Promise<ProfilesConfig> {
-  const { profiles = {} } = (await browser.storage.local.get(
-    ConfigurationKeys.PROFILES
-  )) as { [ConfigurationKeys.PROFILES]: ProfilesConfig };
+  const { profiles = {} } = (await browser.storage.local.get(ConfigurationKeys.PROFILES)) as {
+    [ConfigurationKeys.PROFILES]: ProfilesConfig;
+  };
 
   const pubKeys = Object.keys(profiles);
   // if there are no profiles, check if there's an active profile
@@ -145,9 +145,7 @@ export async function getProfile(publicKey: string): Promise<ProfileConfig> {
   const profiles = await readProfiles();
   return profiles[publicKey];
 }
-export async function updateProfiles(
-  profiles: ProfilesConfig
-): Promise<ProfilesConfig> {
+export async function updateProfiles(profiles: ProfilesConfig): Promise<ProfilesConfig> {
   await browser.storage.local.set({
     [ConfigurationKeys.PROFILES]: profiles
   });
@@ -161,9 +159,7 @@ export async function updateProfiles(
 
   return profiles;
 }
-export async function addProfile(
-  profile: ProfileConfig
-): Promise<ProfilesConfig> {
+export async function addProfile(profile: ProfileConfig): Promise<ProfilesConfig> {
   const profiles = await readProfiles();
   profiles[getPublicKey(convertHexToUint8Array(profile.privateKey))] = profile;
 
@@ -179,9 +175,7 @@ export async function addProfile(
 
   return profiles;
 }
-export async function updateProfile(
-  profile: ProfileConfig
-): Promise<ProfilesConfig> {
+export async function updateProfile(profile: ProfileConfig): Promise<ProfilesConfig> {
   const profiles = await readProfiles();
   profiles[getPublicKey(convertHexToUint8Array(profile.privateKey))] = profile;
 
@@ -191,9 +185,7 @@ export async function updateProfile(
 
   return profiles;
 }
-export async function deleteProfile(
-  profilePublicKey: string
-): Promise<ProfilesConfig> {
+export async function deleteProfile(profilePublicKey: string): Promise<ProfilesConfig> {
   console.debug(`Deleting profile: ${profilePublicKey}...`);
   const profiles = await readProfiles();
 
@@ -233,12 +225,9 @@ export async function getActiveProfile(): Promise<ProfileConfig> {
 //#endregion Profiles <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
 export async function readOpenPrompts(): Promise<OpenPromptItem[]> {
-  const openPromptsData = await browser.storage.local.get(
-    ConfigurationKeys.OPEN_PROMPTS
-  );
+  const openPromptsData = await browser.storage.local.get(ConfigurationKeys.OPEN_PROMPTS);
   // parse from JSON string
-  const openPromptStr = (openPromptsData[ConfigurationKeys.OPEN_PROMPTS] ??
-    '[]') as string;
+  const openPromptStr = (openPromptsData[ConfigurationKeys.OPEN_PROMPTS] ?? '[]') as string;
   return JSON.parse(openPromptStr) as OpenPromptItem[];
 }
 
@@ -252,14 +241,11 @@ export async function updateOpenPrompts(openPrompts: OpenPromptItem[]) {
   return openPrompts;
 }
 
-export function addOpenPromptChangeListener(
-  callback: (newOpenPrompts: OpenPromptItem[]) => void
-) {
+export function addOpenPromptChangeListener(callback: (newOpenPrompts: OpenPromptItem[]) => void) {
   return browser.storage.onChanged.addListener(changes => {
     // only notify if there's a change with Open Prompts
     if (changes[ConfigurationKeys.OPEN_PROMPTS]) {
-      const newValueStr = (changes[ConfigurationKeys.OPEN_PROMPTS].newValue ??
-        '[]') as string;
+      const newValueStr = (changes[ConfigurationKeys.OPEN_PROMPTS].newValue ?? '[]') as string;
       callback(JSON.parse(newValueStr) as OpenPromptItem[]);
     }
   });
@@ -286,6 +272,4 @@ async function clearUnused(): Promise<void> {
 // clear unused
 clearUnused()
   .then(() => console.debug('Storage cleared from unused.'))
-  .catch(error =>
-    console.warn('There was a problem clearing the storage from unused.', error)
-  );
+  .catch(error => console.warn('There was a problem clearing the storage from unused.', error));

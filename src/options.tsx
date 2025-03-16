@@ -6,12 +6,7 @@ import { format, formatDistance } from 'date-fns';
 
 import { Alert, Modal } from './components';
 
-import {
-  PermissionConfig,
-  ProfileConfig,
-  ProfilesConfig,
-  RelaysConfig
-} from './types';
+import { PermissionConfig, ProfileConfig, ProfilesConfig, RelaysConfig } from './types';
 import * as Storage from './storage';
 import {
   convertHexToUint8Array,
@@ -143,9 +138,7 @@ function Options() {
     setRelays(convertRelaysToUIArray(profile.relays));
     setPermissions(convertPermissionsToUIObject(profile.permissions));
     if (profile.privateKey) {
-      setPrivateKey(
-        nip19.nsecEncode(convertHexToUint8Array(profile.privateKey))
-      );
+      setPrivateKey(nip19.nsecEncode(convertHexToUint8Array(profile.privateKey)));
     } else {
       setPrivateKey('');
     }
@@ -241,10 +234,7 @@ function Options() {
       newProfile = JSON.parse(profileImportJson);
     } catch (error) {
       console.warn(`Error parsing the entered JSON`, error);
-      showMessage(
-        `There was an error parsing the JSON. ${error.message}`,
-        'warning'
-      );
+      showMessage(`There was an error parsing the JSON. ${error.message}`, 'warning');
       return;
     }
     if (!newProfile) {
@@ -276,11 +266,7 @@ function Options() {
 
   async function handleDeleteProfileClick(e) {
     e.preventDefault();
-    if (
-      window.confirm(
-        `Delete the profile "${nip19.npubEncode(selectedProfilePubKey)}"?`
-      )
-    ) {
+    if (window.confirm(`Delete the profile "${nip19.npubEncode(selectedProfilePubKey)}"?`)) {
       // delete from storage
       await Storage.deleteProfile(selectedProfilePubKey);
       // now update component
@@ -328,8 +314,7 @@ function Options() {
       const newPubKey = getPublicKey(privateKeyIntArray);
       profiles[newPubKey] = profiles[selectedProfilePubKey];
       // save the hex version in the profile
-      profiles[newPubKey].privateKey =
-        convertUint8ArrayToHex(privateKeyIntArray);
+      profiles[newPubKey].privateKey = convertUint8ArrayToHex(privateKeyIntArray);
       delete profiles[selectedProfilePubKey];
       setSelectedProfilePubKey(newPubKey); // this re-loads the profile in the screen
 
@@ -373,14 +358,12 @@ function Options() {
     console.debug('Converting permissions to UI', permissions);
     if (!permissions) return undefined;
 
-    return Object.entries(permissions).map(
-      ([host, { level, condition, created_at }]) => ({
-        host,
-        level,
-        condition,
-        created_at
-      })
-    );
+    return Object.entries(permissions).map(([host, { level, condition, created_at }]) => ({
+      host,
+      level,
+      condition,
+      created_at
+    }));
   }
 
   async function handleRevoke(e) {
@@ -490,9 +473,7 @@ function Options() {
   //#endregion Relays
 
   async function handleClearStorageClick() {
-    if (
-      confirm('Are you sure you want to delete everything from this browser?')
-    ) {
+    if (confirm('Are you sure you want to delete everything from this browser?')) {
       await Storage.empty();
       // reload the page
       window.location.reload();
@@ -516,37 +497,24 @@ function Options() {
           <div className="form-field">
             <label htmlFor="selected-profile">Selected profile:</label>
             <div id="selected-profile">
-              <select
-                value={selectedProfilePubKey}
-                onChange={handleSelectedProfileChange}
-              >
+              <select value={selectedProfilePubKey} onChange={handleSelectedProfileChange}>
                 {Object.keys(profiles).map(profilePubKey => (
                   <option value={profilePubKey} key={profilePubKey}>
                     {profilePubKey == ''
                       ? '(new profile)'
-                      : profiles[profilePubKey].name ??
-                        truncatePublicKeys(
-                          nip19.npubEncode(profilePubKey),
-                          20,
-                          20
-                        )}
+                      : (profiles[profilePubKey].name ??
+                        truncatePublicKeys(nip19.npubEncode(profilePubKey), 20, 20))}
                   </option>
                 ))}
               </select>
-              <button
-                disabled={isNewProfilePending()}
-                onClick={handleProfileRenameClick}
-              >
+              <button disabled={isNewProfilePending()} onClick={handleProfileRenameClick}>
                 <PencilIcon />
                 Rename
               </button>
             </div>
           </div>
           <div className="profile-actions">
-            <button
-              disabled={isNewProfilePending()}
-              onClick={handleNewProfileClick}
-            >
+            <button disabled={isNewProfilePending()} onClick={handleNewProfileClick}>
               <AddCircleIcon />
               New
             </button>
@@ -558,10 +526,7 @@ function Options() {
               <ArrowUpCircleIcon />
               Import
             </button>
-            <button
-              onClick={handleDeleteProfileClick}
-              className="button button-danger"
-            >
+            <button onClick={handleDeleteProfileClick} className="button button-danger">
               <TrashIcon />
               Delete
             </button>
@@ -588,10 +553,7 @@ function Options() {
               </button>
             </div>
           </div>
-          <button
-            disabled={!isKeyValid() || selectedProfilePubKey != ''}
-            onClick={savePrivateKey}
-          >
+          <button disabled={!isKeyValid() || selectedProfilePubKey != ''} onClick={savePrivateKey}>
             Save key
           </button>
         </section>
@@ -618,15 +580,9 @@ function Options() {
                       <td>{condition}</td>
                       <td
                         style={{ cursor: 'help' }}
-                        title={formatDistance(
-                          new Date(created_at * 1000),
-                          new Date()
-                        )}
+                        title={formatDistance(new Date(created_at * 1000), new Date())}
                       >
-                        {format(
-                          new Date(created_at * 1000),
-                          'yyyy-MM-dd HH:mm:ss'
-                        )}
+                        {format(new Date(created_at * 1000), 'yyyy-MM-dd HH:mm:ss')}
                       </td>
                       <td>
                         <button onClick={handleRevoke} data-domain={host}>
@@ -657,10 +613,7 @@ function Options() {
                   <TrashIcon />
                 </button>
                 <RadioIcon />
-                <input
-                  value={url}
-                  onChange={handleChangeRelayURL.bind(null, i)}
-                />
+                <input value={url} onChange={handleChangeRelayURL.bind(null, i)} />
                 <label>
                   read
                   <input
@@ -680,11 +633,7 @@ function Options() {
               </div>
             ))}
           </div>
-          <div
-            className={`form-field ${
-              !isNewRelayURLValid ? 'validation-error' : ''
-            }`}
-          >
+          <div className={`form-field ${!isNewRelayURLValid ? 'validation-error' : ''}`}>
             <label htmlFor="new-relay-url">New relay URL:</label>
             <input
               id="new-relay-url"
@@ -699,10 +648,7 @@ function Options() {
         </section>
 
         <section className="danger">
-          <button
-            className="button button-danger"
-            onClick={handleClearStorageClick}
-          >
+          <button className="button button-danger" onClick={handleClearStorageClick}>
             <WarningIcon />
             Delete configuration
             <WarningIcon />
@@ -728,14 +674,9 @@ function Options() {
         <button onClick={handleProfileRenameConfirm}>Save</button>
       </Modal>
 
-      <Modal
-        show={isExportModalShown}
-        className="export-modal"
-        onClose={handleExportModalClose}
-      >
+      <Modal show={isExportModalShown} className="export-modal" onClose={handleExportModalClose}>
         <p>
-          This is the JSON that represents your profile (WARNING: it contains
-          your private key):
+          This is the JSON that represents your profile (WARNING: it contains your private key):
         </p>
         <code>{profileExportJson}</code>
         <button onClick={handleExportProfileCopyClick}>
@@ -743,16 +684,9 @@ function Options() {
         </button>
       </Modal>
 
-      <Modal
-        show={isImportModalShown}
-        className="import-modal"
-        onClose={handleImportModalClose}
-      >
+      <Modal show={isImportModalShown} className="import-modal" onClose={handleImportModalClose}>
         <p>Paste the profile JSON in the following box:</p>
-        <textarea
-          value={profileImportJson}
-          onChange={handleChangeProfileImportJson}
-        ></textarea>
+        <textarea value={profileImportJson} onChange={handleChangeProfileImportJson}></textarea>
         <button onClick={handleImportProfileImportClick}>Import</button>
       </Modal>
     </>
