@@ -1,3 +1,5 @@
+import browser from 'webextension-polyfill';
+
 export const PERMISSIONS_REQUIRED = {
   getPublicKey: 1,
   getRelays: 5,
@@ -97,17 +99,13 @@ export function isHexadecimal(value: string) {
 export function convertHexToUint8Array(hexData: string): Uint8Array {
   // ensure even number of characters
   if (hexData.length % 2 != 0) {
-    throw new Error(
-      'WARNING: expecting an even number of characters in the hexString'
-    );
+    throw new Error('WARNING: expecting an even number of characters in the hexString');
   }
 
   // check for some non-hex characters
   const hasInvalidChars = hexData.match(/[G-Z\s]/i);
   if (hasInvalidChars) {
-    throw new Error(
-      `WARNING: found non-hex characters: ${hasInvalidChars.toString()}`
-    );
+    throw new Error(`WARNING: found non-hex characters: ${hasInvalidChars.toString()}`);
   }
 
   // split the string into pairs of octets
@@ -133,4 +131,31 @@ export function convertUint8ArrayToHex(arrayData: Uint8Array): string {
     hexData = hexData + ('0' + value.toString(16)).slice(-2);
   }
   return hexData;
+}
+
+export function openPopupWindow(
+  pageUrl: string,
+  windowSize: { width: number; height: number } = { width: 600, height: 400 }
+): Promise<browser.Windows.Window | browser.Tabs.Tab> {
+  const promptPageURL = browser.runtime.getURL(pageUrl);
+
+  // open the popup window
+
+  let openPromptPromise: Promise<browser.Windows.Window | browser.Tabs.Tab>;
+  if (browser.windows) {
+    openPromptPromise = browser.windows.create({
+      url: promptPageURL,
+      type: 'popup',
+      width: windowSize.width,
+      height: windowSize.height
+    });
+  } else {
+    // Android Firefox
+    openPromptPromise = browser.tabs.create({
+      url: promptPageURL,
+      active: true
+    });
+  }
+
+  return openPromptPromise;
 }

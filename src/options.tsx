@@ -14,6 +14,7 @@ import {
   getPermissionsString,
   isHexadecimal,
   isValidRelayURL,
+  openPopupWindow,
   truncatePublicKeys
 } from './common';
 import logotype from './assets/logo/logotype.png';
@@ -350,6 +351,9 @@ function Options() {
     setKeyHidden(!isKeyHidden);
   }
 
+  async function handleProtectWithPinClick() {
+    await openPopupWindow('pin.html');
+  }
   //#endregion Private key
 
   //#region Permissions
@@ -556,6 +560,8 @@ function Options() {
           <button disabled={!isKeyValid() || selectedProfilePubKey != ''} onClick={savePrivateKey}>
             Save key
           </button>
+
+          <button onClick={handleProtectWithPinClick} className="mt-2">Protect keys with PIN</button>
         </section>
 
         <section>

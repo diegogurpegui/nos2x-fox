@@ -22,6 +22,7 @@ esbuild
       types: './src/types.ts',
       storage: './src/storage.ts',
       common: './src/common.ts',
+      pin: './src/pin.jsx',
       popup: './src/popup.jsx',
       prompt: './src/prompt.jsx',
       options: './src/options.jsx',
