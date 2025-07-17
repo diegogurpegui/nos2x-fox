@@ -51,6 +51,8 @@ function Options() {
   let [isImportModalShown, setImportModalShown] = useState(false);
 
   let [privateKey, setPrivateKey] = useState<string>('');
+  let [savedPrivateKey, setSavedPrivateKey] = useState<string>('');
+  let [hidePrivateKeyForever, setHidePrivateKeyForever] = useState<boolean>(false);
   let [isKeyHidden, setKeyHidden] = useState(true);
   let [relays, setRelays] = useState<RelayConfig[]>([]);
   let [newRelayURL, setNewRelayURL] = useState('');
@@ -130,6 +132,11 @@ function Options() {
     }
   }, []);
 
+  function loadPrivateKey(key: string) {
+    setPrivateKey(key);
+    setSavedPrivateKey(key);
+  }
+
   //#region Profiles
 
   function loadAndSelectProfile(pubKey: string) {
@@ -142,12 +149,13 @@ function Options() {
     setProfileName(profile.name);
     setRelays(convertRelaysToUIArray(profile.relays));
     setPermissions(convertPermissionsToUIObject(profile.permissions));
+    setHidePrivateKeyForever(profile.hidePrivateKeyForever ?? false);
     if (profile.privateKey) {
-      setPrivateKey(
+      loadPrivateKey(
         nip19.nsecEncode(convertHexToUint8Array(profile.privateKey))
       );
     } else {
-      setPrivateKey('');
+      loadPrivateKey('');
     }
 
     setLoadingProfile(false);
@@ -173,7 +181,8 @@ function Options() {
 
     setRelays([]);
     setPermissions(undefined);
-    setPrivateKey('');
+    setHidePrivateKeyForever(false);
+    loadPrivateKey('');
   }
 
   function isNewProfilePending() {
@@ -213,6 +222,11 @@ function Options() {
 
   function handleExportProfileClick() {
     const profile = getSelectedProfile();
+    if (profile?.hidePrivateKeyForever) {
+      console.warn("Won't export profile when private key is hidden");
+      return;
+    }
+
     const profileJson = JSON.stringify(profile);
     setProfileExportJson(profileJson);
     setExportModalShown(true);
@@ -260,10 +274,11 @@ function Options() {
     setProfiles({ ...profiles, ...{ [newPubKey]: newProfile } });
 
     // now load in the component
+    setHidePrivateKeyForever(newProfile.hidePrivateKeyForever ?? false);
     if (newProfile.privateKey) {
-      setPrivateKey(nip19.nsecEncode(pkU8Array));
+      loadPrivateKey(nip19.nsecEncode(pkU8Array));
     } else {
-      setPrivateKey('');
+      loadPrivateKey('');
     }
     setSelectedProfilePubKey(newPubKey);
 
@@ -322,7 +337,7 @@ function Options() {
 
     if (privateKeyIntArray) {
       const privKeyNip19 = nip19.nsecEncode(privateKeyIntArray);
-      setPrivateKey(privKeyNip19);
+      loadPrivateKey(privKeyNip19);
 
       // if new profile need to re-calculate pub key
       const newPubKey = getPublicKey(privateKeyIntArray);
@@ -339,6 +354,28 @@ function Options() {
     }
 
     showMessage('Saved private key!', 'success');
+  }
+
+  async function handleHidePrivateKeyForeverClick() {
+    if (!isKeyValid()) return;
+
+    if (privateKey == '') {
+      console.warn("Won't save hide private key forever when private key is empty");
+      return;
+    }
+
+    const selectedProfile = getSelectedProfile();
+    if (!selectedProfile) {
+      console.warn("Won't save hide private key forever when no profile is selected");
+      return;
+    }
+
+    const answer = window.confirm('Are you sure you want to hide the private key forever? Make sure you have a backup of your private key.');
+    if (!answer) return;
+
+    selectedProfile.hidePrivateKeyForever = true;
+    setHidePrivateKeyForever(true);
+    await saveProfiles();
   }
 
   function isKeyValid() {
@@ -550,7 +587,7 @@ function Options() {
               <AddCircleIcon />
               New
             </button>
-            <button onClick={handleExportProfileClick}>
+            <button disabled={hidePrivateKeyForever} onClick={handleExportProfileClick}>
               <DownloadIcon />
               Export
             </button>
@@ -570,30 +607,48 @@ function Options() {
 
         <section>
           <h3>Keys</h3>
-          <div className="form-field">
-            <label htmlFor="private-key">Private key:</label>
-            <div className="input-group">
-              <input
-                id="private-key"
-                type={isKeyHidden ? 'password' : 'text'}
-                value={privateKey}
-                readOnly={selectedProfilePubKey != ''}
-                onChange={handlePrivateKeyChange}
-              />
-              <button onClick={handlePrivateKeyShowClick}>
-                {isKeyHidden ? <EyeIcon /> : <EyeOffIcon />}
-              </button>
-              <button onClick={generateRandomPrivateKey}>
-                <DiceIcon /> Generate
-              </button>
-            </div>
-          </div>
-          <button
-            disabled={!isKeyValid() || selectedProfilePubKey != ''}
-            onClick={savePrivateKey}
-          >
-            Save key
-          </button>
+          {
+            hidePrivateKeyForever ? (
+              <div className="form-field">
+                <label>Private key: hidden</label>
+              </div>
+            ) : (
+              <>
+                <div className="form-field">
+                  <label htmlFor="private-key">Private key:</label>
+                  <div className="input-group">
+                    <input
+                      id="private-key"
+                      type={isKeyHidden ? 'password' : 'text'}
+                      value={privateKey}
+                      readOnly={selectedProfilePubKey != ''}
+                      onChange={handlePrivateKeyChange}
+                    />
+                    <button onClick={handlePrivateKeyShowClick}>
+                      {isKeyHidden ? <EyeIcon /> : <EyeOffIcon />}
+                    </button>
+                    <button onClick={generateRandomPrivateKey}>
+                      <DiceIcon /> Generate
+                    </button>
+                  </div>
+                </div>
+                <div className="profile-actions">
+                  <button
+                    disabled={!isKeyValid() || selectedProfilePubKey != ''}
+                    onClick={savePrivateKey}
+                  >
+                    Save key
+                  </button>
+                  <button
+                    disabled={privateKey === '' || !isKeyValid() || savedPrivateKey !== privateKey}
+                    onClick={handleHidePrivateKeyForeverClick}
+                  >
+                    Hide private key forever
+                  </button>
+                </div>
+              </>
+            )
+          }
         </section>
 
         <section>
