@@ -53,6 +53,7 @@ export type ProfileConfig = {
   name?: string;
   relays?: RelaysConfig;
   permissions?: PermissionConfig;
+  hidePrivateKeyForever?: boolean;
 };
 
 export type ProfilesConfig = {
