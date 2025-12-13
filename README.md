@@ -52,6 +52,13 @@ After you build the extension, follow these steps:
 ![](screenshots/screenshot_options.png)
 ![](screenshots/screenshot_prompt.png)
 
+## Feedback and ideas
+
+If you are experiencing any issue, you can report it in the [Issues](https://github.com/diegogurpegui/nos2x-fox/issues) secion.
+
+If you have any feature suggestion or idea for this extension, feel free to leave it in the [Discussions](https://github.com/diegogurpegui/nos2x-fox/discussions/categories/ideas).  
+Also, if you like any of the already proposed ideas, upvote them!
+
 ---
 
 ## License and Credits
