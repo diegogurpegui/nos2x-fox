@@ -23,24 +23,24 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "use-boolean-state": "^1.0.2",
-    "use-debounce": "10.0.4",
+    "use-debounce": "^10.0.6",
     "webextension-polyfill": "0.12.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.2",
-    "@types/web": "^0.0.188",
+    "@types/web": "^0.0.300",
     "@types/webextension-polyfill": "^0.12.1",
-    "esbuild": "0.24.2",
+    "esbuild": "^0.27.1",
     "esbuild-plugin-clean": "^1.0.1",
     "esbuild-plugin-copy": "^2.0.1",
     "esbuild-plugin-svgr": "^3.1.0",
     "esbuild-sass-plugin": "3.3.1",
-    "eslint": "9.17.0",
+    "eslint": "^9.39.2",
     "eslint-plugin-babel": "^5.3.1",
     "eslint-plugin-react": "^7.28.0",
     "prettier": "^3.0.3",
     "sass": "^1.58.3",
-    "web-ext": "8.3.0"
+    "web-ext": "^9.2.0"
   },
   "packageManager": "yarn@1.22.19+sha1.4ba7fc5c6e704fce2066ecbfb0b0d8976fe62447"
 }
