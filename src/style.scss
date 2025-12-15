@@ -656,8 +656,11 @@ input,
   header {
     margin-top: 1rem;
     margin-bottom: 1rem;
+    h1 {
+      font-size: 2em;
+    }
     p {
-      font-size: 3em;
+      font-size: 1em;
     }
   }
   main {
@@ -679,4 +682,13 @@ input,
       font-size: 1.3em;
     }
   }
+}
+
+.pin-status-message {
+  font-size: 0.9em;
+  color: $color-success;
+}
+
+.help-cursor {
+  cursor: help;
 }

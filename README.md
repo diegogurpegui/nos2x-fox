@@ -46,6 +46,37 @@ After you build the extension, follow these steps:
 5. Select any file from the `dist/` folder of the extension
 
 
+## PIN Protection
+
+nos2x-fox includes optional PIN protection to encrypt your private keys. When enabled, your private keys are encrypted using a PIN you choose, and you'll need to enter the PIN each time you use the extension (after the first unlock, the PIN is cached for 10 minutes).
+
+### How to Enable/Disable PIN Protection
+
+1. Open the extension options page
+2. In the "Keys" section, click "Enable PIN Protection" or "Disable PIN Protection"
+3. Enter your PIN (4-6 digits)
+4. If enabling, confirm your PIN
+5. If disabling, enter your PIN one last time to verify
+
+### Security Model
+
+- **Ephemeral PIN Cache**: The PIN is stored in memory only and is lost when the browser closes, regardless of how much time has passed
+- **Encrypted Storage**: When PIN protection is enabled, private keys are encrypted before being stored. No plain-text private keys are stored anywhere
+- **Global Protection**: PIN protection applies to all profiles simultaneously
+
+### Encryption Specification
+
+Private keys are encrypted using the following specification:
+
+- **Algorithm**: AES-GCM-256
+- **Key Derivation**: PBKDF2 with SHA-256
+- **Iterations**: 100,000
+- **Salt**: 16 bytes (random, stored with encrypted data)
+- **IV**: 12 bytes (random, stored with encrypted data)
+- **Cache Duration**: 10 minutes (ephemeral, lost on browser close)
+
+The encrypted data is stored as a JSON string containing base64-encoded salt, IV, and ciphertext.
+
 ## Screenshots
 
 ![](screenshots/screenshot_popup.png)

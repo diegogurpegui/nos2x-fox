@@ -1,4 +1,5 @@
 import browser from 'webextension-polyfill';
+import { getPublicKey, nip19 } from 'nostr-tools';
 
 export const PERMISSIONS_REQUIRED = {
   getPublicKey: 1,
@@ -159,3 +160,75 @@ export function openPopupWindow(
 
   return openPromptPromise;
 }
+
+//#region Private Key Utilities
+
+/**
+ * Checks if a private key is encrypted (starts with '{')
+ * @param privateKey - The private key to check
+ * @returns true if the private key is encrypted, false otherwise
+ */
+export function isPrivateKeyEncrypted(privateKey: string): boolean {
+  return privateKey != null && privateKey.startsWith('{');
+}
+
+/**
+ * Derives a public key from a plain-text private key
+ * @param privateKey - The plain-text private key (hex string)
+ * @returns The derived public key
+ * @throws Error if the private key is encrypted or invalid
+ */
+export function derivePublicKeyFromPrivateKey(privateKey: string): string {
+  if (!privateKey) {
+    throw new Error('Private key is empty');
+  }
+  if (isPrivateKeyEncrypted(privateKey)) {
+    throw new Error('Cannot derive public key from encrypted private key');
+  }
+  return getPublicKey(convertHexToUint8Array(privateKey));
+}
+
+/**
+ * Checks if a public key can be derived from a private key
+ * @param privateKey - The private key to check
+ * @param pinEnabled - Whether PIN protection is enabled
+ * @returns true if public key can be derived, false otherwise
+ */
+export function canDerivePublicKeyFromPrivateKey(privateKey: string, pinEnabled: boolean): boolean {
+  if (!privateKey) return false;
+  return !(pinEnabled && isPrivateKeyEncrypted(privateKey));
+}
+
+/**
+ * Formats a private key for display in the UI
+ * @param privateKey - The private key to format
+ * @param pinEnabled - Whether PIN protection is enabled
+ * @returns Empty string if encrypted, otherwise nsec-encoded string
+ */
+export function formatPrivateKeyForDisplay(privateKey: string, pinEnabled: boolean): string {
+  if (!privateKey) return '';
+  if (pinEnabled && isPrivateKeyEncrypted(privateKey)) {
+    // Private key is encrypted, can't display it
+    return '';
+  }
+  // Private key is plain-text, encode it for display
+  return nip19.nsecEncode(convertHexToUint8Array(privateKey));
+}
+
+/**
+ * Validates if a private key has a valid format (hex or nsec)
+ * @param privateKey - The private key to validate
+ * @returns true if the format is valid, false otherwise
+ */
+export function validatePrivateKeyFormat(privateKey: string): boolean {
+  if (privateKey === '') return true;
+  if (privateKey.match(/^[a-f0-9]{64}$/)) return true;
+  try {
+    if (nip19.decode(privateKey).type === 'nsec') return true;
+  } catch (err) {
+    // Invalid format
+  }
+  return false;
+}
+
+//#endregion Private Key Utilities

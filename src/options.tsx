@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useDebouncedCallback } from 'use-debounce';
+import browser from 'webextension-polyfill';
 import { getPublicKey, generateSecretKey, nip19 } from 'nostr-tools';
 import { format, formatDistance } from 'date-fns';
 
@@ -14,8 +15,12 @@ import {
   getPermissionsString,
   isHexadecimal,
   isValidRelayURL,
-  openPopupWindow,
-  truncatePublicKeys
+  truncatePublicKeys,
+  isPrivateKeyEncrypted,
+  derivePublicKeyFromPrivateKey,
+  canDerivePublicKeyFromPrivateKey,
+  formatPrivateKeyForDisplay,
+  validatePrivateKeyFormat
 } from './common';
 import logotype from './assets/logo/logotype.png';
 import AddCircleIcon from './assets/icons/add-circle-outline.svg';
@@ -63,6 +68,7 @@ function Options() {
   let [messageType, setMessageType] = useState('info');
 
   let [version, setVersion] = useState('0.0.0');
+  let [pinEnabled, setPinEnabled] = useState(false);
 
   /**
    * Load options from Storage
@@ -94,6 +100,11 @@ function Options() {
     fetch('./manifest.json')
       .then(response => response.json())
       .then(json => setVersion(json.version));
+
+    // Check PIN protection status
+    Storage.isPinEnabled().then(enabled => {
+      setPinEnabled(enabled);
+    });
   }, []);
 
   /**
@@ -128,7 +139,7 @@ function Options() {
 
   //#region Profiles
 
-  function loadAndSelectProfile(pubKey: string) {
+  async function loadAndSelectProfile(pubKey: string) {
     const profile: ProfileConfig = profiles[pubKey];
     if (!profile) {
       console.warn(`The profile for pubkey '${pubKey}' does not exist.`);
@@ -138,11 +149,11 @@ function Options() {
     setProfileName(profile.name);
     setRelays(convertRelaysToUIArray(profile.relays));
     setPermissions(convertPermissionsToUIObject(profile.permissions));
-    if (profile.privateKey) {
-      setPrivateKey(nip19.nsecEncode(convertHexToUint8Array(profile.privateKey)));
-    } else {
-      setPrivateKey('');
-    }
+    
+    // Always check current PIN status when loading profile
+    const currentPinEnabled = await Storage.isPinEnabled();
+    setPinEnabled(currentPinEnabled);
+    setPrivateKey(formatPrivateKeyForDisplay(profile.privateKey || '', currentPinEnabled));
 
     setLoadingProfile(false);
     console.log(`The profile for pubkey '${pubKey}' was loaded.`);
@@ -197,7 +208,7 @@ function Options() {
     // if name didn't change, do nothing
     if (profile && profileName != profile.name) {
       profile.name = profileName?.trim() != '' ? profileName : undefined;
-      await Storage.updateProfile(profile);
+      await Storage.updateProfile(profile, selectedProfilePubKey);
     }
     setRenameModalShown(false);
   }
@@ -243,19 +254,39 @@ function Options() {
       showMessage(`The imported profile is invalid.`, 'warning');
     }
 
-    // store the new profile
-    await Storage.addProfile(newProfile);
+    // Determine public key before storing
+    const pinEnabled = await Storage.isPinEnabled();
+    let newPubKey: string;
 
-    const pkU8Array = convertHexToUint8Array(newProfile.privateKey);
-    const newPubKey = getPublicKey(pkU8Array);
+    if (!canDerivePublicKeyFromPrivateKey(newProfile.privateKey, pinEnabled)) {
+      // PIN enabled and private key is encrypted - can't derive public key
+      // Try to find existing profile with same encrypted key, or require public key
+      const existingProfiles = await Storage.readProfiles();
+      const matchingProfile = Object.entries(existingProfiles).find(
+        ([_, p]) => p.privateKey === newProfile.privateKey
+      );
+
+      if (matchingProfile) {
+        newPubKey = matchingProfile[0];
+      } else {
+        showMessage(
+          'Cannot import profile with encrypted private key without public key. Please decrypt first or provide public key.',
+          'warning'
+        );
+        return;
+      }
+    } else {
+      // Derive public key from plain-text private key
+      newPubKey = derivePublicKeyFromPrivateKey(newProfile.privateKey);
+    }
+
+    // store the new profile
+    await Storage.addProfile(newProfile, newPubKey);
+
     setProfiles({ ...profiles, ...{ [newPubKey]: newProfile } });
 
     // now load in the component
-    if (newProfile.privateKey) {
-      setPrivateKey(nip19.nsecEncode(pkU8Array));
-    } else {
-      setPrivateKey('');
-    }
+    setPrivateKey(formatPrivateKeyForDisplay(newProfile.privateKey || '', pinEnabled));
     setSelectedProfilePubKey(newPubKey);
 
     setImportModalShown(false);
@@ -312,10 +343,46 @@ function Options() {
       setPrivateKey(privKeyNip19);
 
       // if new profile need to re-calculate pub key
-      const newPubKey = getPublicKey(privateKeyIntArray);
+      const hexPrivateKey = convertUint8ArrayToHex(privateKeyIntArray);
+      const newPubKey = derivePublicKeyFromPrivateKey(hexPrivateKey);
       profiles[newPubKey] = profiles[selectedProfilePubKey];
-      // save the hex version in the profile
-      profiles[newPubKey].privateKey = convertUint8ArrayToHex(privateKeyIntArray);
+      
+      // If PIN protection is enabled, encrypt the private key before saving
+      const pinEnabled = await Storage.isPinEnabled();
+      if (pinEnabled) {
+        try {
+          // Request background script to encrypt the key (it will prompt for PIN if needed)
+          const encryptResponse: { success: boolean; encryptedKey?: string; error?: string } = 
+            (await browser.runtime.sendMessage({
+              type: 'encryptPrivateKey',
+              privateKey: hexPrivateKey
+            })) as any;
+          
+          if (!encryptResponse || !encryptResponse.success) {
+            showMessage(
+              encryptResponse?.error || 'Failed to encrypt private key. PIN is required when PIN protection is enabled.',
+              'warning'
+            );
+            return;
+          }
+          
+          if (!encryptResponse.encryptedKey) {
+            showMessage('Failed to encrypt private key: no encrypted key returned', 'warning');
+            return;
+          }
+          
+          // Use the encrypted key
+          profiles[newPubKey].privateKey = encryptResponse.encryptedKey;
+        } catch (error) {
+          console.error('Error encrypting private key:', error);
+          showMessage('Failed to encrypt private key. ' + error.message, 'warning');
+          return;
+        }
+      } else {
+        // save the hex version in the profile (plain-text)
+        profiles[newPubKey].privateKey = hexPrivateKey;
+      }
+      
       delete profiles[selectedProfilePubKey];
       setSelectedProfilePubKey(newPubKey); // this re-loads the profile in the screen
 
@@ -328,14 +395,7 @@ function Options() {
   }
 
   function isKeyValid() {
-    if (privateKey === '') return true;
-    if (privateKey.match(/^[a-f0-9]{64}$/)) return true;
-    try {
-      if (nip19.decode(privateKey).type === 'nsec') return true;
-    } catch (err) {
-      console.error(`Error decoding NIP19 key: ${err}`);
-    }
-    return false;
+    return validatePrivateKeyFormat(privateKey);
   }
 
   async function handlePrivateKeyChange(e) {
@@ -352,7 +412,21 @@ function Options() {
   }
 
   async function handleProtectWithPinClick() {
-    await openPopupWindow('pin.html');
+    const mode = pinEnabled ? 'disable' : 'setup';
+    try {
+      await browser.runtime.sendMessage({
+        type: 'openPinPrompt',
+        mode
+      });
+
+      // Refresh PIN status after a short delay (to allow for async operations)
+      setTimeout(async () => {
+        const enabled = await Storage.isPinEnabled();
+        setPinEnabled(enabled);
+      }, 1000);
+    } catch (error) {
+      console.error('Error opening PIN prompt:', error);
+    }
   }
   //#endregion Private key
 
@@ -552,7 +626,7 @@ function Options() {
               <button onClick={handlePrivateKeyShowClick}>
                 {isKeyHidden ? <EyeIcon /> : <EyeOffIcon />}
               </button>
-              <button onClick={generateRandomPrivateKey}>
+              <button disabled={selectedProfilePubKey != ''} onClick={generateRandomPrivateKey}>
                 <DiceIcon /> Generate
               </button>
             </div>
@@ -561,7 +635,14 @@ function Options() {
             Save key
           </button>
 
-          <button onClick={handleProtectWithPinClick} className="mt-2">Protect keys with PIN</button>
+          <button onClick={handleProtectWithPinClick} className="mt-2">
+            {pinEnabled ? 'Disable PIN Protection' : 'Enable PIN Protection'}
+          </button>
+          {pinEnabled && (
+            <p className="mt-1 pin-status-message">
+              PIN protection is enabled. Your private keys are encrypted.
+            </p>
+          )}
         </section>
 
         <section>
@@ -585,7 +666,7 @@ function Options() {
                       <td>{getPermissionsString(level)}</td>
                       <td>{condition}</td>
                       <td
-                        style={{ cursor: 'help' }}
+                        className="help-cursor"
                         title={formatDistance(new Date(created_at * 1000), new Date())}
                       >
                         {format(new Date(created_at * 1000), 'yyyy-MM-dd HH:mm:ss')}
