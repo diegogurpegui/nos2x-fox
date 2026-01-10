@@ -27,7 +27,15 @@ export async function getCachedPin(): Promise<string | null> {
   // Get the configured cache duration
   const cacheDurationMs = await Storage.getPinCacheDuration();
 
-  if (age > cacheDurationMs) {
+  // Ensure cache duration is a valid positive number
+  if (!cacheDurationMs || cacheDurationMs <= 0 || !Number.isFinite(cacheDurationMs)) {
+    // Invalid cache duration, clear cache for safety
+    pinCache = null;
+    return null;
+  }
+
+  // Check if cache has expired
+  if (age >= cacheDurationMs) {
     // Cache expired, clear it
     pinCache = null;
     return null;
