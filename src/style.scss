@@ -5,6 +5,7 @@ $color-primary-light: #0b2d40;
 $color-primary-disabled: #394a53;
 $color-text: #0c1c25;
 $color-text-inv: #ffffff;
+$color-text-muted: #606060;
 $color-info: #aebef5;
 $color-info-dark: #7381ad;
 $color-warning: #f08046;
@@ -62,6 +63,10 @@ h2 {
 
 h3 {
   font-size: 1.2em;
+}
+
+h4 {
+  font-size: 1em;
 }
 
 code {
@@ -263,6 +268,11 @@ button,
   }
 }
 
+.text-help {
+  font-size: 0.8em;
+  color: $color-text-muted;
+}
+
 /* ---- Utility classes ---- */
 .mx-auto {
   margin-left: auto;
@@ -284,7 +294,7 @@ button,
   margin-bottom: 0;
 }
 
-@for $i from 1 through 10 {
+@for $i from 0 through 10 {
   .mx-#{$i} {
     margin-left: #{$i * 0.25}rem;
     margin-right: #{$i * 0.25}rem;
@@ -423,6 +433,27 @@ input,
     &:last-child {
       border-top-right-radius: $button-radius;
       border-bottom-right-radius: $button-radius;
+    }
+  }
+  select {
+    flex-grow: 0;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-left: 0;
+    margin-left: -2px;
+    max-width: 12em;
+
+    @media (max-width: $responsive-break-sm) {
+      max-width: 100%;
+      flex: 1 1 auto;
+    }
+  }
+  #pin-cache-duration {
+    max-width: 10em;
+
+    @media (max-width: $responsive-break-sm) {
+      max-width: 100%;
+      flex: 1 1 auto;
     }
   }
 }

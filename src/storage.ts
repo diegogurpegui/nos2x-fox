@@ -67,6 +67,24 @@ export async function setPinEnabled(enabled: boolean): Promise<void> {
 }
 
 /**
+ * Gets the PIN cache duration in milliseconds
+ * Default: 10 seconds (10000 ms)
+ */
+export async function getPinCacheDuration(): Promise<number> {
+  const data = await browser.storage.local.get(ConfigurationKeys.PIN_CACHE_DURATION);
+  return (data[ConfigurationKeys.PIN_CACHE_DURATION] as number) ?? 10 * 1000; // Default: 10 seconds
+}
+
+/**
+ * Sets the PIN cache duration in milliseconds
+ */
+export async function setPinCacheDuration(durationMs: number): Promise<void> {
+  await browser.storage.local.set({
+    [ConfigurationKeys.PIN_CACHE_DURATION]: durationMs
+  });
+}
+
+/**
  * Gets the encrypted private key from storage
  */
 export async function getEncryptedPrivateKey(): Promise<string | null> {

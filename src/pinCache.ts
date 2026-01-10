@@ -3,8 +3,7 @@
  * PIN is stored in memory only and is lost when the browser closes
  */
 
-// PIN cache duration: 10 minutes (clearly documented)
-const PIN_CACHE_DURATION_MS = 10 * 60 * 1000;
+import * as Storage from './storage';
 
 interface PinCacheEntry {
   pin: string;
@@ -17,15 +16,18 @@ let pinCache: PinCacheEntry | null = null;
  * Gets the cached PIN if it's still valid
  * @returns The cached PIN if valid, null if expired or not cached
  */
-export function getCachedPin(): string | null {
+export async function getCachedPin(): Promise<string | null> {
   if (!pinCache) {
     return null;
   }
 
   const now = Date.now();
   const age = now - pinCache.timestamp;
+  
+  // Get the configured cache duration
+  const cacheDurationMs = await Storage.getPinCacheDuration();
 
-  if (age > PIN_CACHE_DURATION_MS) {
+  if (age > cacheDurationMs) {
     // Cache expired, clear it
     pinCache = null;
     return null;
@@ -56,6 +58,6 @@ export function clearCachedPin(): void {
  * Checks if a PIN is currently cached and valid
  * @returns true if PIN is cached and not expired
  */
-export function isPinCached(): boolean {
-  return getCachedPin() !== null;
+export async function isPinCached(): Promise<boolean> {
+  return (await getCachedPin()) !== null;
 }

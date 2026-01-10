@@ -69,6 +69,7 @@ function Options() {
 
   let [version, setVersion] = useState('0.0.0');
   let [pinEnabled, setPinEnabled] = useState(false);
+  let [pinCacheDuration, setPinCacheDuration] = useState<number>(10 * 1000); // Default: 10 seconds
 
   /**
    * Load options from Storage
@@ -104,6 +105,11 @@ function Options() {
     // Check PIN protection status
     Storage.isPinEnabled().then(enabled => {
       setPinEnabled(enabled);
+    });
+
+    // Load PIN cache duration
+    Storage.getPinCacheDuration().then(duration => {
+      setPinCacheDuration(duration);
     });
   }, []);
 
@@ -149,7 +155,7 @@ function Options() {
     setProfileName(profile.name);
     setRelays(convertRelaysToUIArray(profile.relays));
     setPermissions(convertPermissionsToUIObject(profile.permissions));
-    
+
     // Always check current PIN status when loading profile
     const currentPinEnabled = await Storage.isPinEnabled();
     setPinEnabled(currentPinEnabled);
@@ -346,31 +352,32 @@ function Options() {
       const hexPrivateKey = convertUint8ArrayToHex(privateKeyIntArray);
       const newPubKey = derivePublicKeyFromPrivateKey(hexPrivateKey);
       profiles[newPubKey] = profiles[selectedProfilePubKey];
-      
+
       // If PIN protection is enabled, encrypt the private key before saving
       const pinEnabled = await Storage.isPinEnabled();
       if (pinEnabled) {
         try {
           // Request background script to encrypt the key (it will prompt for PIN if needed)
-          const encryptResponse: { success: boolean; encryptedKey?: string; error?: string } = 
+          const encryptResponse: { success: boolean; encryptedKey?: string; error?: string } =
             (await browser.runtime.sendMessage({
               type: 'encryptPrivateKey',
               privateKey: hexPrivateKey
             })) as any;
-          
+
           if (!encryptResponse || !encryptResponse.success) {
             showMessage(
-              encryptResponse?.error || 'Failed to encrypt private key. PIN is required when PIN protection is enabled.',
+              encryptResponse?.error ||
+                'Failed to encrypt private key. PIN is required when PIN protection is enabled.',
               'warning'
             );
             return;
           }
-          
+
           if (!encryptResponse.encryptedKey) {
             showMessage('Failed to encrypt private key: no encrypted key returned', 'warning');
             return;
           }
-          
+
           // Use the encrypted key
           profiles[newPubKey].privateKey = encryptResponse.encryptedKey;
         } catch (error) {
@@ -382,7 +389,7 @@ function Options() {
         // save the hex version in the profile (plain-text)
         profiles[newPubKey].privateKey = hexPrivateKey;
       }
-      
+
       delete profiles[selectedProfilePubKey];
       setSelectedProfilePubKey(newPubKey); // this re-loads the profile in the screen
 
@@ -427,6 +434,13 @@ function Options() {
     } catch (error) {
       console.error('Error opening PIN prompt:', error);
     }
+  }
+
+  async function handlePinCacheDurationChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const duration = parseInt(e.target.value, 10);
+    setPinCacheDuration(duration);
+    await Storage.setPinCacheDuration(duration);
+    showMessage('PIN cache duration updated', 'success');
   }
   //#endregion Private key
 
@@ -635,9 +649,30 @@ function Options() {
             Save key
           </button>
 
-          <button onClick={handleProtectWithPinClick} className="mt-2">
-            {pinEnabled ? 'Disable PIN Protection' : 'Enable PIN Protection'}
-          </button>
+          <h4 className="mb-0">PIN Protection</h4>
+          <p className="text-help">
+            When enabled, ALL your private keys are encrypted. You will need to enter your PIN each
+            time you use the extension.
+            <br />
+            The PIN is cached for the duration you select below.
+          </p>
+          <div className="form-field mt-2">
+            <div className="input-group">
+              <button onClick={handleProtectWithPinClick}>
+                {pinEnabled ? 'Disable PIN Protection' : 'Enable PIN Protection'}
+              </button>
+              <select
+                id="pin-cache-duration"
+                value={pinCacheDuration}
+                onChange={handlePinCacheDurationChange}
+              >
+                <option value={10 * 1000}>10 seconds</option>
+                <option value={30 * 1000}>30 seconds</option>
+                <option value={5 * 60 * 1000}>5 minutes</option>
+                <option value={10 * 60 * 1000}>10 minutes</option>
+              </select>
+            </div>
+          </div>
           {pinEnabled && (
             <p className="mt-1 pin-status-message">
               PIN protection is enabled. Your private keys are encrypted.

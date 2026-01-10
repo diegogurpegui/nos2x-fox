@@ -70,7 +70,7 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
     }
 
     // Check if PIN is cached, if not prompt for it
-    let pin = getCachedPin();
+    let pin = await getCachedPin();
     if (!pin) {
       pin = await promptPin('unlock');
       if (!pin) {
@@ -89,7 +89,7 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
 
   // Check if it's a request to get cached PIN status
   if (message.type === 'getCachedPin') {
-    const pin = getCachedPin();
+    const pin = await getCachedPin();
     return { success: true, pin };
   }
 
@@ -368,7 +368,7 @@ async function getDecryptedPrivateKey(): Promise<string | null> {
   }
 
   // PIN protection enabled, check cache first
-  let pin = getCachedPin();
+  let pin = await getCachedPin();
   if (!pin) {
     // Cache expired or not set, prompt for PIN
     pin = await promptPin('unlock');
