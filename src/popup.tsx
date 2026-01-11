@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 
 import { ProfilesConfig } from './types';
 import * as Storage from './storage';
-import { convertHexToUint8Array, truncatePublicKeys } from './common';
+import { truncatePublicKeys } from './common';
 
 import logotype from './assets/logo/logotype.png';
 import CopyIcon from './assets/icons/copy-outline.svg';
@@ -18,15 +18,18 @@ function Popup() {
   let [profiles, setProfiles] = useState<ProfilesConfig>({});
 
   useEffect(() => {
-    Storage.readActivePrivateKey().then(privateKey => {
-      if (privateKey) {
-        const pubKey = getPublicKey(convertHexToUint8Array(privateKey));
-        setPublicKeyHexa(pubKey);
+    async function loadActiveProfile() {
+      // Always use stored active public key (it's always saved now)
+      const activePublicKey = await Storage.getActivePublicKey();
+      if (activePublicKey) {
+        setPublicKeyHexa(activePublicKey);
       } else {
         setPublicKeyHexa(undefined);
         setPublicKeyNIP19(undefined);
       }
-    });
+    }
+
+    loadActiveProfile();
 
     Storage.readProfiles().then(profiles => {
       if (profiles) {
@@ -73,14 +76,29 @@ function Popup() {
       });
   }
 
-  function handleProfileChange(event) {
+  async function handleProfileChange(event) {
     const pubKey = event.target.value;
     setPublicKeyHexa(pubKey);
     const profile = profiles[pubKey];
     if (!profile) {
       console.warn(`The profile for pubkey '${pubKey}' does not exist.`);
+      return;
     }
-    Storage.updateActivePrivateKey(profile.privateKey);
+
+    // Always update active public key first
+    await Storage.setActivePublicKey(pubKey);
+    
+    // Then update private key based on PIN status
+    const pinEnabled = await Storage.isPinEnabled();
+    if (pinEnabled) {
+      // When PIN protection is enabled, update encrypted private key
+      if (profile.privateKey) {
+        await Storage.setEncryptedPrivateKey(profile.privateKey);
+      }
+    } else {
+      // When PIN protection is disabled, update active private key
+      await Storage.updateActivePrivateKey(profile.privateKey);
+    }
   }
 
   function clipboardCopyPubKey() {
@@ -109,8 +127,7 @@ function Popup() {
             <div className="pubkey-show">
               <code>
                 {truncatePublicKeys(
-                  (selectedKeyType === 'hex' ? publicKeyHexa : publiKeyNIP19) ??
-                    ''
+                  (selectedKeyType === 'hex' ? publicKeyHexa : publiKeyNIP19) ?? ''
                 )}
               </code>
               <button
@@ -125,8 +142,7 @@ function Popup() {
               <select value={publicKeyHexa} onChange={handleProfileChange}>
                 {Object.keys(profiles).map(profilePubKey => (
                   <option value={profilePubKey} key={profilePubKey}>
-                    {profiles[profilePubKey].name ??
-                      nip19.npubEncode(profilePubKey)}
+                    {profiles[profilePubKey].name ?? nip19.npubEncode(profilePubKey)}
                   </option>
                 ))}
               </select>

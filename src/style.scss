@@ -5,6 +5,7 @@ $color-primary-light: #0b2d40;
 $color-primary-disabled: #394a53;
 $color-text: #0c1c25;
 $color-text-inv: #ffffff;
+$color-text-muted: #606060;
 $color-info: #aebef5;
 $color-info-dark: #7381ad;
 $color-warning: #f08046;
@@ -22,12 +23,16 @@ $radius-default: 0.3em;
 $button-radius: $radius-default;
 
 $font-family: 'Prompt', Arial, Helvetica, sans-serif;
+$font-family-mono: 'Courier New', Courier, monospace;
 $font-size: 12pt;
 
 $responsive-break-sm: 40em; // Small devices such as large phones (640px and up)
 $responsive-break-md: 48em; // Medium devices such as tablets (768px and up)
 $responsive-break-lg: 64em; // Large devices such as laptops (1024px and up)
 $responsive-break-xl: 80em; // Largest devices such as desktops (1280px and up)
+
+$padding-input-x: 1em;
+$padding-input-y: 0.5em;
 
 // ****** Font ******
 @font-face {
@@ -58,6 +63,10 @@ h2 {
 
 h3 {
   font-size: 1.2em;
+}
+
+h4 {
+  font-size: 1em;
 }
 
 code {
@@ -259,6 +268,55 @@ button,
   }
 }
 
+.text-help {
+  font-size: 0.8em;
+  color: $color-text-muted;
+}
+
+/* ---- Utility classes ---- */
+.mx-auto {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.mx-0 {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.my-auto {
+  margin-top: auto;
+  margin-bottom: auto;
+}
+
+.my-0 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+@for $i from 0 through 10 {
+  .mx-#{$i} {
+    margin-left: #{$i * 0.25}rem;
+    margin-right: #{$i * 0.25}rem;
+  }
+  .my-#{$i} {
+    margin-top: #{$i * 0.25}rem;
+    margin-bottom: #{$i * 0.25}rem;
+  }
+  .mt-#{$i} {
+    margin-top: #{$i * 0.25}rem;
+  }
+  .mb-#{$i} {
+    margin-bottom: #{$i * 0.25}rem;
+  }
+  .mr-#{$i} {
+    margin-right: #{$i * 0.25}rem;
+  }
+  .ml-#{$i} {
+    margin-left: #{$i * 0.25}rem;
+  }
+}
+
 /* ---- Modals ---- */
 .modal-wrapper {
   display: flex;
@@ -317,7 +375,7 @@ input,
   border: 2px solid $color-primary;
   border-radius: 0.3em;
   background-color: $background-color;
-  padding: 0.5em 1em;
+  padding: $padding-input-y $padding-input-x;
   display: flex;
   flex-grow: 1;
 
@@ -375,6 +433,27 @@ input,
     &:last-child {
       border-top-right-radius: $button-radius;
       border-bottom-right-radius: $button-radius;
+    }
+  }
+  select {
+    flex-grow: 0;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-left: 0;
+    margin-left: -2px;
+    max-width: 12em;
+
+    @media (max-width: $responsive-break-sm) {
+      max-width: 100%;
+      flex: 1 1 auto;
+    }
+  }
+  #pin-cache-duration {
+    max-width: 10em;
+
+    @media (max-width: $responsive-break-sm) {
+      max-width: 100%;
+      flex: 1 1 auto;
     }
   }
 }
@@ -600,4 +679,47 @@ input,
       }
     }
   }
+}
+
+/* ---- PIN ---- */
+.pin-main {
+  text-align: center;
+  header {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
+    h1 {
+      font-size: 2em;
+    }
+    p {
+      font-size: 1em;
+    }
+  }
+  main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    input {
+      font-family: $font-family-mono;
+      font-size: 2em;
+      max-width: 7em;
+      text-align: center;
+      letter-spacing: 0.5em;
+      padding-left: $padding-input-x + 0.5em;
+    }
+
+    button {
+      margin-top: 1rem;
+      font-size: 1.3em;
+    }
+  }
+}
+
+.pin-status-message {
+  font-size: 0.9em;
+  color: $color-success;
+}
+
+.help-cursor {
+  cursor: help;
 }

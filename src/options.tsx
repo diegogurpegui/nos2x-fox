@@ -1,17 +1,13 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useDebouncedCallback } from 'use-debounce';
+import browser from 'webextension-polyfill';
 import { getPublicKey, generateSecretKey, nip19 } from 'nostr-tools';
 import { format, formatDistance } from 'date-fns';
 
 import { Alert, Modal } from './components';
 
-import {
-  PermissionConfig,
-  ProfileConfig,
-  ProfilesConfig,
-  RelaysConfig
-} from './types';
+import { PermissionConfig, ProfileConfig, ProfilesConfig, RelaysConfig } from './types';
 import * as Storage from './storage';
 import {
   convertHexToUint8Array,
@@ -19,7 +15,12 @@ import {
   getPermissionsString,
   isHexadecimal,
   isValidRelayURL,
-  truncatePublicKeys
+  truncatePublicKeys,
+  isPrivateKeyEncrypted,
+  derivePublicKeyFromPrivateKey,
+  canDerivePublicKeyFromPrivateKey,
+  formatPrivateKeyForDisplay,
+  validatePrivateKeyFormat
 } from './common';
 import logotype from './assets/logo/logotype.png';
 import AddCircleIcon from './assets/icons/add-circle-outline.svg';
@@ -67,6 +68,8 @@ function Options() {
   let [messageType, setMessageType] = useState('info');
 
   let [version, setVersion] = useState('0.0.0');
+  let [pinEnabled, setPinEnabled] = useState(false);
+  let [pinCacheDuration, setPinCacheDuration] = useState<number>(10 * 1000); // Default: 10 seconds
 
   /**
    * Load options from Storage
@@ -98,6 +101,16 @@ function Options() {
     fetch('./manifest.json')
       .then(response => response.json())
       .then(json => setVersion(json.version));
+
+    // Check PIN protection status
+    Storage.isPinEnabled().then(enabled => {
+      setPinEnabled(enabled);
+    });
+
+    // Load PIN cache duration
+    Storage.getPinCacheDuration().then(duration => {
+      setPinCacheDuration(duration);
+    });
   }, []);
 
   /**
@@ -132,7 +145,7 @@ function Options() {
 
   //#region Profiles
 
-  function loadAndSelectProfile(pubKey: string) {
+  async function loadAndSelectProfile(pubKey: string) {
     const profile: ProfileConfig = profiles[pubKey];
     if (!profile) {
       console.warn(`The profile for pubkey '${pubKey}' does not exist.`);
@@ -142,13 +155,11 @@ function Options() {
     setProfileName(profile.name);
     setRelays(convertRelaysToUIArray(profile.relays));
     setPermissions(convertPermissionsToUIObject(profile.permissions));
-    if (profile.privateKey) {
-      setPrivateKey(
-        nip19.nsecEncode(convertHexToUint8Array(profile.privateKey))
-      );
-    } else {
-      setPrivateKey('');
-    }
+
+    // Always check current PIN status when loading profile
+    const currentPinEnabled = await Storage.isPinEnabled();
+    setPinEnabled(currentPinEnabled);
+    setPrivateKey(formatPrivateKeyForDisplay(profile.privateKey || '', currentPinEnabled));
 
     setLoadingProfile(false);
     console.log(`The profile for pubkey '${pubKey}' was loaded.`);
@@ -203,7 +214,7 @@ function Options() {
     // if name didn't change, do nothing
     if (profile && profileName != profile.name) {
       profile.name = profileName?.trim() != '' ? profileName : undefined;
-      await Storage.updateProfile(profile);
+      await Storage.updateProfile(profile, selectedProfilePubKey);
     }
     setRenameModalShown(false);
   }
@@ -241,10 +252,7 @@ function Options() {
       newProfile = JSON.parse(profileImportJson);
     } catch (error) {
       console.warn(`Error parsing the entered JSON`, error);
-      showMessage(
-        `There was an error parsing the JSON. ${error.message}`,
-        'warning'
-      );
+      showMessage(`There was an error parsing the JSON. ${error.message}`, 'warning');
       return;
     }
     if (!newProfile) {
@@ -252,19 +260,39 @@ function Options() {
       showMessage(`The imported profile is invalid.`, 'warning');
     }
 
-    // store the new profile
-    await Storage.addProfile(newProfile);
+    // Determine public key before storing
+    const pinEnabled = await Storage.isPinEnabled();
+    let newPubKey: string;
 
-    const pkU8Array = convertHexToUint8Array(newProfile.privateKey);
-    const newPubKey = getPublicKey(pkU8Array);
+    if (!canDerivePublicKeyFromPrivateKey(newProfile.privateKey, pinEnabled)) {
+      // PIN enabled and private key is encrypted - can't derive public key
+      // Try to find existing profile with same encrypted key, or require public key
+      const existingProfiles = await Storage.readProfiles();
+      const matchingProfile = Object.entries(existingProfiles).find(
+        ([_, p]) => p.privateKey === newProfile.privateKey
+      );
+
+      if (matchingProfile) {
+        newPubKey = matchingProfile[0];
+      } else {
+        showMessage(
+          'Cannot import profile with encrypted private key without public key. Please decrypt first or provide public key.',
+          'warning'
+        );
+        return;
+      }
+    } else {
+      // Derive public key from plain-text private key
+      newPubKey = derivePublicKeyFromPrivateKey(newProfile.privateKey);
+    }
+
+    // store the new profile
+    await Storage.addProfile(newProfile, newPubKey);
+
     setProfiles({ ...profiles, ...{ [newPubKey]: newProfile } });
 
     // now load in the component
-    if (newProfile.privateKey) {
-      setPrivateKey(nip19.nsecEncode(pkU8Array));
-    } else {
-      setPrivateKey('');
-    }
+    setPrivateKey(formatPrivateKeyForDisplay(newProfile.privateKey || '', pinEnabled));
     setSelectedProfilePubKey(newPubKey);
 
     setImportModalShown(false);
@@ -276,11 +304,7 @@ function Options() {
 
   async function handleDeleteProfileClick(e) {
     e.preventDefault();
-    if (
-      window.confirm(
-        `Delete the profile "${nip19.npubEncode(selectedProfilePubKey)}"?`
-      )
-    ) {
+    if (window.confirm(`Delete the profile "${nip19.npubEncode(selectedProfilePubKey)}"?`)) {
       // delete from storage
       await Storage.deleteProfile(selectedProfilePubKey);
       // now update component
@@ -325,11 +349,47 @@ function Options() {
       setPrivateKey(privKeyNip19);
 
       // if new profile need to re-calculate pub key
-      const newPubKey = getPublicKey(privateKeyIntArray);
+      const hexPrivateKey = convertUint8ArrayToHex(privateKeyIntArray);
+      const newPubKey = derivePublicKeyFromPrivateKey(hexPrivateKey);
       profiles[newPubKey] = profiles[selectedProfilePubKey];
-      // save the hex version in the profile
-      profiles[newPubKey].privateKey =
-        convertUint8ArrayToHex(privateKeyIntArray);
+
+      // If PIN protection is enabled, encrypt the private key before saving
+      const pinEnabled = await Storage.isPinEnabled();
+      if (pinEnabled) {
+        try {
+          // Request background script to encrypt the key (it will prompt for PIN if needed)
+          const encryptResponse: { success: boolean; encryptedKey?: string; error?: string } =
+            (await browser.runtime.sendMessage({
+              type: 'encryptPrivateKey',
+              privateKey: hexPrivateKey
+            })) as any;
+
+          if (!encryptResponse || !encryptResponse.success) {
+            showMessage(
+              encryptResponse?.error ||
+                'Failed to encrypt private key. PIN is required when PIN protection is enabled.',
+              'warning'
+            );
+            return;
+          }
+
+          if (!encryptResponse.encryptedKey) {
+            showMessage('Failed to encrypt private key: no encrypted key returned', 'warning');
+            return;
+          }
+
+          // Use the encrypted key
+          profiles[newPubKey].privateKey = encryptResponse.encryptedKey;
+        } catch (error) {
+          console.error('Error encrypting private key:', error);
+          showMessage('Failed to encrypt private key. ' + error.message, 'warning');
+          return;
+        }
+      } else {
+        // save the hex version in the profile (plain-text)
+        profiles[newPubKey].privateKey = hexPrivateKey;
+      }
+
       delete profiles[selectedProfilePubKey];
       setSelectedProfilePubKey(newPubKey); // this re-loads the profile in the screen
 
@@ -342,14 +402,7 @@ function Options() {
   }
 
   function isKeyValid() {
-    if (privateKey === '') return true;
-    if (privateKey.match(/^[a-f0-9]{64}$/)) return true;
-    try {
-      if (nip19.decode(privateKey).type === 'nsec') return true;
-    } catch (err) {
-      console.error(`Error decoding NIP19 key: ${err}`);
-    }
-    return false;
+    return validatePrivateKeyFormat(privateKey);
   }
 
   async function handlePrivateKeyChange(e) {
@@ -365,6 +418,30 @@ function Options() {
     setKeyHidden(!isKeyHidden);
   }
 
+  async function handleProtectWithPinClick() {
+    const mode = pinEnabled ? 'disable' : 'setup';
+    try {
+      await browser.runtime.sendMessage({
+        type: 'openPinPrompt',
+        mode
+      });
+
+      // Refresh PIN status after a short delay (to allow for async operations)
+      setTimeout(async () => {
+        const enabled = await Storage.isPinEnabled();
+        setPinEnabled(enabled);
+      }, 1000);
+    } catch (error) {
+      console.error('Error opening PIN prompt:', error);
+    }
+  }
+
+  async function handlePinCacheDurationChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const duration = parseInt(e.target.value, 10);
+    setPinCacheDuration(duration);
+    await Storage.setPinCacheDuration(duration);
+    showMessage('PIN cache duration updated', 'success');
+  }
   //#endregion Private key
 
   //#region Permissions
@@ -373,14 +450,12 @@ function Options() {
     console.debug('Converting permissions to UI', permissions);
     if (!permissions) return undefined;
 
-    return Object.entries(permissions).map(
-      ([host, { level, condition, created_at }]) => ({
-        host,
-        level,
-        condition,
-        created_at
-      })
-    );
+    return Object.entries(permissions).map(([host, { level, condition, created_at }]) => ({
+      host,
+      level,
+      condition,
+      created_at
+    }));
   }
 
   async function handleRevoke(e) {
@@ -490,9 +565,7 @@ function Options() {
   //#endregion Relays
 
   async function handleClearStorageClick() {
-    if (
-      confirm('Are you sure you want to delete everything from this browser?')
-    ) {
+    if (confirm('Are you sure you want to delete everything from this browser?')) {
       await Storage.empty();
       // reload the page
       window.location.reload();
@@ -516,37 +589,24 @@ function Options() {
           <div className="form-field">
             <label htmlFor="selected-profile">Selected profile:</label>
             <div id="selected-profile">
-              <select
-                value={selectedProfilePubKey}
-                onChange={handleSelectedProfileChange}
-              >
+              <select value={selectedProfilePubKey} onChange={handleSelectedProfileChange}>
                 {Object.keys(profiles).map(profilePubKey => (
                   <option value={profilePubKey} key={profilePubKey}>
                     {profilePubKey == ''
                       ? '(new profile)'
-                      : profiles[profilePubKey].name ??
-                        truncatePublicKeys(
-                          nip19.npubEncode(profilePubKey),
-                          20,
-                          20
-                        )}
+                      : (profiles[profilePubKey].name ??
+                        truncatePublicKeys(nip19.npubEncode(profilePubKey), 20, 20))}
                   </option>
                 ))}
               </select>
-              <button
-                disabled={isNewProfilePending()}
-                onClick={handleProfileRenameClick}
-              >
+              <button disabled={isNewProfilePending()} onClick={handleProfileRenameClick}>
                 <PencilIcon />
                 Rename
               </button>
             </div>
           </div>
           <div className="profile-actions">
-            <button
-              disabled={isNewProfilePending()}
-              onClick={handleNewProfileClick}
-            >
+            <button disabled={isNewProfilePending()} onClick={handleNewProfileClick}>
               <AddCircleIcon />
               New
             </button>
@@ -558,10 +618,7 @@ function Options() {
               <ArrowUpCircleIcon />
               Import
             </button>
-            <button
-              onClick={handleDeleteProfileClick}
-              className="button button-danger"
-            >
+            <button onClick={handleDeleteProfileClick} className="button button-danger">
               <TrashIcon />
               Delete
             </button>
@@ -583,17 +640,44 @@ function Options() {
               <button onClick={handlePrivateKeyShowClick}>
                 {isKeyHidden ? <EyeIcon /> : <EyeOffIcon />}
               </button>
-              <button onClick={generateRandomPrivateKey}>
+              <button disabled={selectedProfilePubKey != ''} onClick={generateRandomPrivateKey}>
                 <DiceIcon /> Generate
               </button>
             </div>
           </div>
-          <button
-            disabled={!isKeyValid() || selectedProfilePubKey != ''}
-            onClick={savePrivateKey}
-          >
+          <button disabled={!isKeyValid() || selectedProfilePubKey != ''} onClick={savePrivateKey}>
             Save key
           </button>
+
+          <h4 className="mb-0">PIN Protection</h4>
+          <p className="text-help">
+            When enabled, ALL your private keys are encrypted. You will need to enter your PIN each
+            time you use the extension.
+            <br />
+            The PIN is cached for the duration you select below.
+          </p>
+          <div className="form-field mt-2">
+            <div className="input-group">
+              <button onClick={handleProtectWithPinClick}>
+                {pinEnabled ? 'Disable PIN Protection' : 'Enable PIN Protection'}
+              </button>
+              <select
+                id="pin-cache-duration"
+                value={pinCacheDuration}
+                onChange={handlePinCacheDurationChange}
+              >
+                <option value={10 * 1000}>10 seconds</option>
+                <option value={30 * 1000}>30 seconds</option>
+                <option value={5 * 60 * 1000}>5 minutes</option>
+                <option value={10 * 60 * 1000}>10 minutes</option>
+              </select>
+            </div>
+          </div>
+          {pinEnabled && (
+            <p className="mt-1 pin-status-message">
+              PIN protection is enabled. Your private keys are encrypted.
+            </p>
+          )}
         </section>
 
         <section>
@@ -617,16 +701,10 @@ function Options() {
                       <td>{getPermissionsString(level)}</td>
                       <td>{condition}</td>
                       <td
-                        style={{ cursor: 'help' }}
-                        title={formatDistance(
-                          new Date(created_at * 1000),
-                          new Date()
-                        )}
+                        className="help-cursor"
+                        title={formatDistance(new Date(created_at * 1000), new Date())}
                       >
-                        {format(
-                          new Date(created_at * 1000),
-                          'yyyy-MM-dd HH:mm:ss'
-                        )}
+                        {format(new Date(created_at * 1000), 'yyyy-MM-dd HH:mm:ss')}
                       </td>
                       <td>
                         <button onClick={handleRevoke} data-domain={host}>
@@ -657,10 +735,7 @@ function Options() {
                   <TrashIcon />
                 </button>
                 <RadioIcon />
-                <input
-                  value={url}
-                  onChange={handleChangeRelayURL.bind(null, i)}
-                />
+                <input value={url} onChange={handleChangeRelayURL.bind(null, i)} />
                 <label>
                   read
                   <input
@@ -680,11 +755,7 @@ function Options() {
               </div>
             ))}
           </div>
-          <div
-            className={`form-field ${
-              !isNewRelayURLValid ? 'validation-error' : ''
-            }`}
-          >
+          <div className={`form-field ${!isNewRelayURLValid ? 'validation-error' : ''}`}>
             <label htmlFor="new-relay-url">New relay URL:</label>
             <input
               id="new-relay-url"
@@ -699,10 +770,7 @@ function Options() {
         </section>
 
         <section className="danger">
-          <button
-            className="button button-danger"
-            onClick={handleClearStorageClick}
-          >
+          <button className="button button-danger" onClick={handleClearStorageClick}>
             <WarningIcon />
             Delete configuration
             <WarningIcon />
@@ -728,14 +796,9 @@ function Options() {
         <button onClick={handleProfileRenameConfirm}>Save</button>
       </Modal>
 
-      <Modal
-        show={isExportModalShown}
-        className="export-modal"
-        onClose={handleExportModalClose}
-      >
+      <Modal show={isExportModalShown} className="export-modal" onClose={handleExportModalClose}>
         <p>
-          This is the JSON that represents your profile (WARNING: it contains
-          your private key):
+          This is the JSON that represents your profile (WARNING: it contains your private key):
         </p>
         <code>{profileExportJson}</code>
         <button onClick={handleExportProfileCopyClick}>
@@ -743,16 +806,9 @@ function Options() {
         </button>
       </Modal>
 
-      <Modal
-        show={isImportModalShown}
-        className="import-modal"
-        onClose={handleImportModalClose}
-      >
+      <Modal show={isImportModalShown} className="import-modal" onClose={handleImportModalClose}>
         <p>Paste the profile JSON in the following box:</p>
-        <textarea
-          value={profileImportJson}
-          onChange={handleChangeProfileImportJson}
-        ></textarea>
+        <textarea value={profileImportJson} onChange={handleChangeProfileImportJson}></textarea>
         <button onClick={handleImportProfileImportClick}>Import</button>
       </Modal>
     </>

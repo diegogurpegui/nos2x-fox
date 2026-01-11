@@ -6,14 +6,10 @@ import { getPublicKey, nip19 } from 'nostr-tools';
 import {
   convertHexToUint8Array,
   getAllowedCapabilities,
-  truncatePublicKeys
+  truncatePublicKeys,
+  derivePublicKeyFromPrivateKey
 } from './common';
-import {
-  AuthorizationCondition,
-  KindNames,
-  ProfileConfig,
-  PromptResponse
-} from './types';
+import { AuthorizationCondition, KindNames, ProfileConfig, PromptResponse } from './types';
 import * as Storage from './storage';
 
 import ShieldCheckmarkIcon from './assets/icons/shield-checkmark-outline.svg';
@@ -41,8 +37,8 @@ function Prompt() {
   useEffect(() => {
     Storage.getActiveProfile().then(profile => {
       setActiveProfile(profile);
-      const pkUint = convertHexToUint8Array(profile.privateKey);
-      setActivePubKeyNIP19(nip19.npubEncode(getPublicKey(pkUint)));
+      const pubKey = derivePublicKeyFromPrivateKey(profile.privateKey);
+      setActivePubKeyNIP19(nip19.npubEncode(pubKey));
     });
   }, []);
 
@@ -154,9 +150,7 @@ function Prompt() {
       {showCloseConfirmation && (
         <div className="close-confirm-dialog-wrapper">
           <div className="close-confirm-dialog">
-            <p>
-              If you close this window, all prompts will be taken as rejected.
-            </p>
+            <p>If you close this window, all prompts will be taken as rejected.</p>
             <div className="action-buttons">
               <button onClick={handleCloseCancel}>Cancel</button>
               <button className="button-danger" onClick={handleCloseConfirm}>
@@ -197,32 +191,23 @@ function Prompt() {
           <strong>
             {activeProfile && (
               <span>
-                {activeProfile.name} (
-                {truncatePublicKeys(activePubKeyNIP19, 10, 10)})
+                {activeProfile.name} ({truncatePublicKeys(activePubKeyNIP19, 10, 10)})
               </span>
             )}
           </strong>
         </p>
         <p>
-          Event:{' '}
-          <span className="badge">
-            {kindName ?? `(not recognized. Kind: ${kind})`}
-          </span>
+          Event: <span className="badge">{kindName ?? `(not recognized. Kind: ${kind})`}</span>
         </p>
         <p>is requesting your permission to:</p>
         <ul className="prompt-requests">
-          {getAllowedCapabilities(openPrompts[activePromptIndex].level).map(
-            cap => (
-              <li key={cap}>{cap}</li>
-            )
-          )}
+          {getAllowedCapabilities(openPrompts[activePromptIndex].level).map(cap => (
+            <li key={cap}>{cap}</li>
+          ))}
         </ul>
       </div>
       <div className="prompt-action-buttons">
-        <button
-          className="button"
-          onClick={authorizeHandler(AuthorizationCondition.FOREVER)}
-        >
+        <button className="button" onClick={authorizeHandler(AuthorizationCondition.FOREVER)}>
           <ShieldCheckmarkIcon /> Authorize forever
         </button>
         <div className="button-group">
@@ -264,9 +249,7 @@ function Prompt() {
         <>
           <p>Acting on:</p>
           <pre className="prompt-request-raw">
-            <code>
-              {JSON.stringify(openPrompts[activePromptIndex].params, null, 2)}
-            </code>
+            <code>{JSON.stringify(openPrompts[activePromptIndex].params, null, 2)}</code>
           </pre>
         </>
       )}

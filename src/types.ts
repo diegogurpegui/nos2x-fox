@@ -33,7 +33,11 @@ export const KindNames = {
 export enum ConfigurationKeys {
   PRIVATE_KEY = 'private_key',
   PROFILES = 'profiles',
-  OPEN_PROMPTS = 'open_prompts'
+  OPEN_PROMPTS = 'open_prompts',
+  PIN_ENABLED = 'pin_enabled',
+  ENCRYPTED_PRIVATE_KEY = 'encrypted_private_key',
+  ACTIVE_PUBLIC_KEY = 'active_public_key',
+  PIN_CACHE_DURATION = 'pin_cache_duration'
 }
 
 export type RelaysConfig = {
@@ -111,4 +115,16 @@ export type OpenPromptItem = {
   host: string;
   level: number;
   params: PromptParams;
+};
+
+export type PinMessage = {
+  type: 'setupPin' | 'verifyPin' | 'disablePin';
+  pin?: string;
+  encryptedKey?: string;
+  id?: string;
+};
+
+export type PinMessageResponse = {
+  success: boolean;
+  error?: string;
 };
