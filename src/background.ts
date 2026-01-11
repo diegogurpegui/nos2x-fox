@@ -24,6 +24,7 @@ import { LRUCache } from './LRUCache';
 import PromptManager from './PromptManager';
 import { getCachedPin, setCachedPin, clearCachedPin } from './pinCache';
 import { decryptPrivateKey, encryptPrivateKey } from './pinEncryption';
+import { clearUint8Array, clearStringReference } from './memoryUtils';
 
 /** Map to keep track of open prompts so we can properly capture the responses and close them */
 const openPromptMap: Record<
@@ -76,7 +77,7 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
       if (!pin) {
         return { success: false, error: 'PIN is required to encrypt private key' };
       }
-      setCachedPin(pin);
+      await setCachedPin(pin);
     }
 
     try {
@@ -84,6 +85,9 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
       return { success: true, encryptedKey };
     } catch (error) {
       return { success: false, error: error.message };
+    } finally {
+      // Clear PIN reference after use (strings are immutable, but we null the reference)
+      pin = clearStringReference(pin) as any;
     }
   }
 
@@ -176,16 +180,19 @@ async function handleContentScriptMessage({
   }
 
   // Get decrypted private key (handles PIN protection automatically)
-  const privateKey = await getDecryptedPrivateKey();
+  let privateKey = await getDecryptedPrivateKey();
   if (!privateKey) {
     return { error: { message: 'no private key found' } };
   }
 
-  // privateKey is in hexa, we must convert to UInt8Array for working
-  const sk = convertHexToUint8Array(privateKey);
-
-  // Derive public key once for reuse
+  // Minimize private key exposure: convert to Uint8Array immediately
+  // Derive public key before clearing private key string
   const activePubKey = derivePublicKeyFromPrivateKey(privateKey);
+
+  // Convert private key string to Uint8Array and clear string reference immediately
+  const sk = convertHexToUint8Array(privateKey);
+  // Clear private key string reference (strings are immutable, but we null the reference)
+  privateKey = clearStringReference(privateKey) as any;
 
   try {
     switch (type) {
@@ -238,6 +245,9 @@ async function handleContentScriptMessage({
     }
   } catch (error) {
     return { error: { message: error.message, stack: error.stack } };
+  } finally {
+    // Clear private key Uint8Array from memory after operations complete
+    clearUint8Array(sk);
   }
 }
 
@@ -375,21 +385,26 @@ async function getDecryptedPrivateKey(): Promise<string | null> {
     if (!pin) {
       return null; // User cancelled or error
     }
-    setCachedPin(pin);
+    await setCachedPin(pin);
   }
 
   // Decrypt private key using PIN
+  let decryptedKey: string | null = null;
   try {
     const encryptedKey = await Storage.getEncryptedPrivateKey();
     if (!encryptedKey) {
       throw new Error('Encrypted private key not found');
     }
-    const decryptedKey = await decryptPrivateKey(pin, encryptedKey);
+    decryptedKey = await decryptPrivateKey(pin, encryptedKey);
     return decryptedKey;
   } catch (error) {
     // Decryption failed, clear cache and return error
     clearCachedPin();
     throw error;
+  } finally {
+    // Clear PIN reference after use (strings are immutable, but we null the reference)
+    // Note: pin may still be cached, but we clear the local reference
+    pin = clearStringReference(pin) as any;
   }
 }
 
@@ -447,10 +462,13 @@ async function handlePinMessage(
     return { success: false, error: 'PIN prompt not found' };
   }
 
+  // Extract PIN to local variable for clearing after use
+  let localPin = pin;
+
   try {
     switch (type) {
       case 'setupPin': {
-        if (!pin || !encryptedKey) {
+        if (!localPin || !encryptedKey) {
           return { success: false, error: 'Missing PIN or encrypted key' };
         }
 
@@ -458,14 +476,14 @@ async function handlePinMessage(
         await Storage.setEncryptedPrivateKey(encryptedKey);
 
         // Encrypt all profile keys and store active public key
-        await Storage.enablePinProtectionWithEncryptedKey(pin, encryptedKey);
+        await Storage.enablePinProtectionWithEncryptedKey(localPin, encryptedKey);
 
         // Cache PIN
-        setCachedPin(pin);
+        await setCachedPin(localPin);
 
         // Resolve PIN prompt
         if (pinPrompt) {
-          pinPrompt.resolve(pin);
+          pinPrompt.resolve(localPin);
           delete pinPromptMap[pinPrompt.id];
         }
 
@@ -482,7 +500,7 @@ async function handlePinMessage(
       }
 
       case 'verifyPin': {
-        if (!pin) {
+        if (!localPin) {
           return { success: false, error: 'Missing PIN' };
         }
 
@@ -493,13 +511,13 @@ async function handlePinMessage(
         }
 
         try {
-          await decryptPrivateKey(pin, encryptedKey);
+          await decryptPrivateKey(localPin, encryptedKey);
           // PIN is correct, cache it
-          setCachedPin(pin);
+          await setCachedPin(localPin);
 
           // Resolve PIN prompt
           if (pinPrompt) {
-            pinPrompt.resolve(pin);
+            pinPrompt.resolve(localPin);
             delete pinPromptMap[pinPrompt.id];
           }
 
@@ -519,17 +537,17 @@ async function handlePinMessage(
       }
 
       case 'disablePin': {
-        if (!pin) {
+        if (!localPin) {
           return { success: false, error: 'Missing PIN' };
         }
 
         // Verify PIN and disable protection
-        await Storage.disablePinProtection(pin);
+        await Storage.disablePinProtection(localPin);
         clearCachedPin();
 
         // Resolve PIN prompt
         if (pinPrompt) {
-          pinPrompt.resolve(pin);
+          pinPrompt.resolve(localPin);
           delete pinPromptMap[pinPrompt.id];
         }
 
@@ -554,6 +572,9 @@ async function handlePinMessage(
       delete pinPromptMap[pinPrompt.id];
     }
     return { success: false, error: error.message };
+  } finally {
+    // Clear PIN reference after use (strings are immutable, but we null the reference)
+    localPin = clearStringReference(localPin) as any;
   }
 }
 

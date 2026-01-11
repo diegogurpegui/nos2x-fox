@@ -27,6 +27,12 @@ function PinPrompt() {
     if (id) {
       setPromptId(id);
     }
+
+    // Cleanup: clear PIN state on component unmount
+    return () => {
+      setPin('');
+      setConfirmPin('');
+    };
   }, []);
 
   function handlePinChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -92,14 +98,23 @@ function PinPrompt() {
         })) as PinMessageResponse;
 
         if (response && response.success) {
+          // Clear PIN state immediately after successful setup
+          setPin('');
+          setConfirmPin('');
           window.close();
         } else {
           setError(response?.error || 'Failed to enable PIN protection');
           setIsProcessing(false);
+          // Clear PIN state on error
+          setPin('');
+          setConfirmPin('');
         }
       } catch (error) {
         setError(error.message || 'Failed to enable PIN protection');
         setIsProcessing(false);
+        // Clear PIN state on error
+        setPin('');
+        setConfirmPin('');
       }
     } else if (mode === 'unlock') {
       // Unlock mode: verify PIN and cache it
@@ -112,6 +127,8 @@ function PinPrompt() {
         })) as PinMessageResponse;
 
         if (response && response.success) {
+          // Clear PIN state immediately after successful unlock
+          setPin('');
           window.close();
         } else {
           setError(response?.error || 'Incorrect PIN');
@@ -134,6 +151,8 @@ function PinPrompt() {
         })) as PinMessageResponse | undefined;
 
         if (response && response.success) {
+          // Clear PIN state immediately after successful disable
+          setPin('');
           window.close();
         } else {
           setError((response && response.error) || 'Incorrect PIN');

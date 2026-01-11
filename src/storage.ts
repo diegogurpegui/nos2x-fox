@@ -17,6 +17,7 @@ import {
   canDerivePublicKeyFromPrivateKey
 } from './common';
 import { encryptPrivateKey, decryptPrivateKey } from './pinEncryption';
+import { clearStringReference } from './memoryUtils';
 
 export async function readActivePrivateKey(): Promise<string> {
   const data = await browser.storage.local.get(ConfigurationKeys.PRIVATE_KEY);
@@ -214,32 +215,38 @@ export async function disablePinProtection(pin: string): Promise<void> {
   }
 
   // Decrypt active private key
-  const decryptedActiveKey = await decryptPrivateKey(pin, encryptedKey);
+  let decryptedActiveKey = await decryptPrivateKey(pin, encryptedKey);
 
-  // Decrypt all profile private keys
-  const profiles = await readProfiles();
-  for (const pubKey in profiles) {
-    const profile = profiles[pubKey];
-    if (profile.privateKey) {
-      try {
-        profile.privateKey = await decryptPrivateKey(pin, profile.privateKey);
-      } catch (error) {
-        console.error(`Failed to decrypt profile ${pubKey}:`, error);
-        throw new Error(`Failed to decrypt profile private key: ${error.message}`);
+  try {
+    // Decrypt all profile private keys
+    const profiles = await readProfiles();
+    for (const pubKey in profiles) {
+      const profile = profiles[pubKey];
+      if (profile.privateKey) {
+        try {
+          profile.privateKey = await decryptPrivateKey(pin, profile.privateKey);
+        } catch (error) {
+          console.error(`Failed to decrypt profile ${pubKey}:`, error);
+          throw new Error(`Failed to decrypt profile private key: ${error.message}`);
+        }
       }
     }
+    await updateProfiles(profiles);
+
+    // Clear encrypted private key
+    await browser.storage.local.remove(ConfigurationKeys.ENCRYPTED_PRIVATE_KEY);
+
+    // Disable PIN protection BEFORE updating private key to allow plain-text storage
+    await setPinEnabled(false);
+
+    // Update active private key (this will also update active public key)
+    // This must happen after disabling PIN protection to avoid the error
+    await updateActivePrivateKey(decryptedActiveKey);
+  } finally {
+    // Clear decrypted active key reference from memory
+    // Note: Strings are immutable, but we null the reference to minimize exposure
+    decryptedActiveKey = clearStringReference(decryptedActiveKey) as any;
   }
-  await updateProfiles(profiles);
-
-  // Clear encrypted private key
-  await browser.storage.local.remove(ConfigurationKeys.ENCRYPTED_PRIVATE_KEY);
-
-  // Disable PIN protection BEFORE updating private key to allow plain-text storage
-  await setPinEnabled(false);
-
-  // Update active private key (this will also update active public key)
-  // This must happen after disabling PIN protection to avoid the error
-  await updateActivePrivateKey(decryptedActiveKey);
 }
 
 /**
@@ -519,7 +526,7 @@ export async function updateProfile(
       // If updating permissions/relays only, preserve the existing encrypted key from storage
       const existingProfiles = await readProfiles();
       let existingProfile: ProfileConfig | undefined;
-      
+
       if (publicKey) {
         existingProfile = existingProfiles[publicKey];
       } else {
@@ -529,7 +536,7 @@ export async function updateProfile(
           existingProfile = existingProfiles[activePublicKey];
         }
       }
-      
+
       // If we found an existing profile with encrypted key, use it instead
       if (existingProfile?.privateKey && isPrivateKeyEncrypted(existingProfile.privateKey)) {
         profile.privateKey = existingProfile.privateKey;

@@ -3,6 +3,8 @@
  * Uses AES-GCM-256 with PBKDF2 key derivation
  */
 
+import { clearUint8Array } from './memoryUtils';
+
 const PBKDF2_ITERATIONS = 100000;
 const SALT_LENGTH = 16; // bytes
 const IV_LENGTH = 12; // bytes (for AES-GCM)
@@ -20,23 +22,34 @@ async function deriveKeyFromPin(pin: string, salt: Uint8Array): Promise<CryptoKe
   const encoder = new TextEncoder();
   const pinData = encoder.encode(pin);
 
-  const baseKey = await crypto.subtle.importKey('raw', pinData, 'PBKDF2', false, [
-    'deriveBits',
-    'deriveKey'
-  ]);
+  try {
+    const baseKey = await crypto.subtle.importKey('raw', pinData, 'PBKDF2', false, [
+      'deriveBits',
+      'deriveKey'
+    ]);
 
-  return crypto.subtle.deriveKey(
-    {
-      name: 'PBKDF2',
-      salt: salt as BufferSource,
-      iterations: PBKDF2_ITERATIONS,
-      hash: 'SHA-256'
-    },
-    baseKey,
-    { name: 'AES-GCM', length: 256 },
-    false,
-    ['encrypt', 'decrypt']
-  );
+    const derivedKey = await crypto.subtle.deriveKey(
+      {
+        name: 'PBKDF2',
+        salt: salt as BufferSource,
+        iterations: PBKDF2_ITERATIONS,
+        hash: 'SHA-256'
+      },
+      baseKey,
+      { name: 'AES-GCM', length: 256 },
+      false,
+      ['encrypt', 'decrypt']
+    );
+
+    // Clear PIN data from memory
+    clearUint8Array(pinData);
+
+    return derivedKey;
+  } catch (error) {
+    // Ensure PIN data is cleared even on error
+    clearUint8Array(pinData);
+    throw error;
+  }
 }
 
 /**
@@ -57,24 +70,29 @@ export async function encryptPrivateKey(pin: string, privateKey: string): Promis
   const encoder = new TextEncoder();
   const privateKeyBytes = encoder.encode(privateKey);
 
-  // Encrypt
-  const ciphertext = await crypto.subtle.encrypt(
-    {
-      name: 'AES-GCM',
-      iv: iv
-    },
-    key,
-    privateKeyBytes
-  );
+  try {
+    // Encrypt
+    const ciphertext = await crypto.subtle.encrypt(
+      {
+        name: 'AES-GCM',
+        iv: iv
+      },
+      key,
+      privateKeyBytes
+    );
 
-  // Convert to base64 for storage
-  const encryptedData: EncryptedData = {
-    salt: arrayBufferToBase64(salt),
-    iv: arrayBufferToBase64(iv),
-    ciphertext: arrayBufferToBase64(ciphertext)
-  };
+    // Convert to base64 for storage
+    const encryptedData: EncryptedData = {
+      salt: arrayBufferToBase64(salt),
+      iv: arrayBufferToBase64(iv),
+      ciphertext: arrayBufferToBase64(ciphertext)
+    };
 
-  return JSON.stringify(encryptedData);
+    return JSON.stringify(encryptedData);
+  } finally {
+    // Clear private key bytes from memory
+    clearUint8Array(privateKeyBytes);
+  }
 }
 
 /**
@@ -112,12 +130,26 @@ export async function decryptPrivateKey(pin: string, encryptedKey: string): Prom
       ciphertext as BufferSource
     );
   } catch (error) {
+    // Clear ciphertext from memory on error
+    clearUint8Array(ciphertext);
     throw new Error('Decryption failed - incorrect PIN or corrupted data');
   }
 
-  // Convert back to string
-  const decoder = new TextDecoder();
-  return decoder.decode(decryptedBytes);
+  try {
+    // Convert back to string
+    const decoder = new TextDecoder();
+    const decryptedKey = decoder.decode(decryptedBytes);
+    return decryptedKey;
+  } finally {
+    // Clear decrypted bytes from memory
+    // Note: ArrayBuffer cannot be directly cleared, but we clear the view
+    if (decryptedBytes) {
+      const view = new Uint8Array(decryptedBytes);
+      clearUint8Array(view);
+    }
+    // Also clear ciphertext after successful decryption
+    clearUint8Array(ciphertext);
+  }
 }
 
 /**
