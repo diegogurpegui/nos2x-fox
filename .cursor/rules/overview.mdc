@@ -1,0 +1,29 @@
+---
+alwaysApply: true
+---
+Project name: nos2x-fox
+
+## Description
+nos2x-fox is a Firefox browser extension that acts as a Nostr signer (NIP-07). It provides a `window.nostr` object to web applications, allowing them to sign Nostr events and perform encryption/decryption operations without exposing private keys.
+The extension includes optional PIN protection (AES-GCM-256 encryption) for securing private keys, with an ephemeral PIN cache that lasts 10 minutes.
+Built with React, TypeScript, and WebExtension APIs (Manifest V2), using esbuild for bundling. It's a fork of the original nos2x Chrome extension, adapted for Firefox and related browsers.
+
+For more functional information you see the README.md file.
+
+## Techical references
+
+NIP: Nostr Implementation Proposal. Protocol and standards.
+
+Technical documentation for the different NIPs:
+- **NIP-07**: window.nostr capability for web browsers  
+  https://github.com/nostr-protocol/nips/blob/master/07.md
+- **NIP-04**: Encrypted Direct Message (deprecated in favor of NIP-17)  
+  https://github.com/nostr-protocol/nips/blob/master/04.md
+- **NIP-17**: Private Direct Messages  
+  https://github.com/nostr-protocol/nips/blob/master/17.md
+- **Main NIP repository**:  
+  https://github.com/nostr-protocol/nips?tab=readme-ov-file
+
+
+Documentation for the `nostr-tools` Node package used:
+https://github.com/nbd-wtf/nostr-tools

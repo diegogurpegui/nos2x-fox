@@ -1,0 +1,12 @@
+---
+globs: *.ts, *.tsx, *.js, *.html
+alwaysApply: false
+---
+## Code guidelines
+- **DRY**: Do not Repeat Youself.  
+  Reuse code when available and appropriate
+- **KISS**: Keep It Simple Stupid.  
+  Code has to be as simple as possible as long as the purpose is being fulfilled.
+- Do not add any external library of package. You can only use what is already a dependecy of the project.
+- Whenever you make a change that affects user experience explicitely, and it's related to something already mentioned in the README.md file, then update it.
+- Whenever possible, group pieces of related code toghered. For example functions that work on similar stuff, variables or enums that reference similar stuff, etc.
