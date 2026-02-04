@@ -112,6 +112,19 @@ browser.runtime.onMessageExternal.addListener(async (message, sender) => {
   return handleContentScriptMessage({ type, params, host: extensionId });
 });
 
+// Clear any stale open prompts on browser startup
+// This handles the case where prompts were pending when browser crashed/closed
+browser.runtime.onStartup.addListener(async () => {
+  console.debug('Browser startup detected. Clearing stale open prompts.');
+  await PromptManager.clear();
+});
+
+// Clear stale open prompts on extension install/update/reload
+browser.runtime.onInstalled.addListener(async () => {
+  console.debug('Extension installed/updated. Clearing stale open prompts.');
+  await PromptManager.clear();
+});
+
 browser.windows.onRemoved.addListener(_windowId => {
   // Search the open prompts with this window ID
   const openPrompts = Object.values(openPromptMap).filter(({ windowId }) => windowId === _windowId);
@@ -258,6 +271,8 @@ async function handlePromptMessage(
   const openPrompt = openPromptMap[id];
   if (!openPrompt) {
     console.warn('Message from unrecognized prompt: ', id);
+    // Still remove from storage to prevent stale entries accumulating
+    await PromptManager.remove(id);
     return;
   }
 
