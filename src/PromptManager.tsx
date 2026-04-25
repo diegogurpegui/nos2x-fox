@@ -20,12 +20,13 @@ const managerFunctions = {
     const openPrompts = (await readOpenPrompts()) ?? [];
     return await updateOpenPrompts(openPrompts.filter(item => item.id !== id));
   },
+  clear: async () => {
+    return await updateOpenPrompts([]);
+  },
   addChangeListener: (callback: (newOpenPrompts: OpenPromptItem[]) => void) => {
     return addOpenPromptChangeListener(callback);
   },
-  removeChangeListener: (
-    listener: (newOpenPrompts: OpenPromptItem[]) => void
-  ) => {
+  removeChangeListener: (listener: (newOpenPrompts: OpenPromptItem[]) => void) => {
     return removeOpenPromptChangeListener(listener);
   }
 };
