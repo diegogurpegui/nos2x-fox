@@ -15,36 +15,17 @@ async window.nostr.getPublicKey(): string // returns your public key as hex
 async window.nostr.signEvent(event): Event // returns the full event object signed
 async window.nostr.getRelays(): { [url: string]: RelayPolicy } // returns a map of relays
 
-async window.nostr.nip04.encrypt(pubkey, plaintext): string // returns ciphertext+iv as specified in nip04
-async window.nostr.nip04.decrypt(pubkey, ciphertext): string // takes ciphertext+iv as specified in nip04
+async window.nostr.nip04.encrypt(peer, plaintext): string // returns ciphertext+iv as specified in nip04
+async window.nostr.nip04.decrypt(peer, ciphertext): string // takes ciphertext+iv as specified in nip04
 
-async window.nostr.nip44.encrypt(pubkey, plaintext): string // takes pubkey, plaintext, returns ciphertext as specified in nip-44
-async window.nostr.nip44.decrypt(pubkey, ciphertext): string // takes pubkey, ciphertext, returns plaintext as specified in nip-44
+async window.nostr.nip44.encrypt(peer, plaintext): string // takes peer pubkey, plaintext, returns ciphertext as specified in nip-44
+async window.nostr.nip44.decrypt(peer, ciphertext): string // takes peer pubkey, ciphertext, returns plaintext as specified in nip-44
 ```
 
 ## Install
 
 * By yourself from file: look into [Releases](https://github.com/diegogurpegui/nos2x-fox/releases)
 * From the site [Firefox Add-on](https://addons.mozilla.org/en-US/firefox/addon/nos2x-fox/)
-
-## Develop
-
-To run the plugin from this code:
-
-```
-$ git clone https://github.com/diegogurpegui/nos2x-fox
-$ cd nos2x-fox
-$ yarn install
-$ yarn run build
-```
-
-After you build the extension, follow these steps:
-1. Open Firefox
-2. Go to about:debugging
-3. Click on "This Firefox" on the left
-4. Click on "Load Temporary Add-on..."
-5. Select any file from the `dist/` folder of the extension
-
 
 ## PIN Protection
 
@@ -82,6 +63,24 @@ The encrypted data is stored as a JSON string containing base64-encoded salt, IV
 ![](screenshots/screenshot_popup.png)
 ![](screenshots/screenshot_options.png)
 ![](screenshots/screenshot_prompt.png)
+
+## Development
+
+To run the plugin from this code:
+
+```
+$ git clone https://github.com/diegogurpegui/nos2x-fox
+$ cd nos2x-fox
+$ yarn install
+$ yarn run build
+```
+
+After you build the extension, follow these steps:
+1. Open Firefox
+2. Go to about:debugging
+3. Click on "This Firefox" on the left
+4. Click on "Load Temporary Add-on..."
+5. Select any file from the `dist/` folder of the extension
 
 ## Feedback and ideas
 
