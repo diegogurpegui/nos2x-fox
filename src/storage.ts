@@ -14,7 +14,8 @@ import {
   convertHexToUint8Array,
   isPrivateKeyEncrypted,
   derivePublicKeyFromPrivateKey,
-  canDerivePublicKeyFromPrivateKey
+  canDerivePublicKeyFromPrivateKey,
+  shouldRemoveStoredPermission
 } from './common';
 import { encryptPrivateKey, decryptPrivateKey } from './pinEncryption';
 import { clearStringReference } from './memoryUtils';
@@ -318,15 +319,10 @@ export async function readActivePermissions(): Promise<PermissionConfig> {
 
   // delete expired
   var needsUpdate = false;
+  const nowSeconds = Math.round(Date.now() / 1000);
   for (let host in permissions) {
-    if (
-      (permissions[host].condition === AuthorizationCondition.EXPIRABLE_5M &&
-        permissions[host].created_at < Date.now() / 1000 - 5 * 60) ||
-      (permissions[host].condition === AuthorizationCondition.EXPIRABLE_1H &&
-        permissions[host].created_at < Date.now() / 1000 - 1 * 60 * 60) ||
-      (permissions[host].condition === AuthorizationCondition.EXPIRABLE_8H &&
-        permissions[host].created_at < Date.now() / 1000 - 8 * 60 * 60)
-    ) {
+    const perm = permissions[host];
+    if (shouldRemoveStoredPermission(perm.condition, perm.created_at, nowSeconds, perm.duration_seconds)) {
       delete permissions[host];
       needsUpdate = true;
     }
@@ -350,17 +346,23 @@ export async function readActivePermissions(): Promise<PermissionConfig> {
 export async function addActivePermission(
   host: string,
   condition: string,
-  level: number
+  level: number,
+  durationSeconds?: number
 ): Promise<ProfilesConfig> {
   let storedPermissions = await readActivePermissions();
 
+  const entry: PermissionConfig[string] = {
+    condition,
+    level,
+    created_at: Math.round(Date.now() / 1000)
+  };
+  if (condition === AuthorizationCondition.EXPIRABLE_CUSTOM && durationSeconds != null) {
+    entry.duration_seconds = durationSeconds;
+  }
+
   storedPermissions = {
     ...storedPermissions,
-    [host]: {
-      condition,
-      level,
-      created_at: Math.round(Date.now() / 1000)
-    }
+    [host]: entry
   };
 
   // update the active profile

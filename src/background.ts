@@ -18,7 +18,8 @@ import {
   PERMISSIONS_REQUIRED,
   convertHexToUint8Array,
   openPopupWindow,
-  derivePublicKeyFromPrivateKey
+  derivePublicKeyFromPrivateKey,
+  normalizeCustomAuthorizationDurationSeconds
 } from './common';
 import { LRUCache } from './LRUCache';
 import PromptManager from './PromptManager';
@@ -252,7 +253,7 @@ async function handleContentScriptMessage({
 }
 
 async function handlePromptMessage(
-  { id, condition, host, level }: PromptResponse,
+  { id, condition, host, level, durationSeconds }: PromptResponse,
   sender
 ): Promise<void> {
   const openPrompt = openPromptMap[id];
@@ -274,6 +275,17 @@ async function handlePromptMessage(
           console.warn('No authorization level provided');
         }
         break;
+      case AuthorizationCondition.EXPIRABLE_CUSTOM: {
+        const normalizedSeconds = normalizeCustomAuthorizationDurationSeconds(durationSeconds);
+        if (level && normalizedSeconds != null) {
+          openPrompt.resolve?.(true);
+          Storage.addActivePermission(host ?? '', condition, level, normalizedSeconds);
+        } else {
+          console.warn('Invalid custom authorization duration or missing level');
+          openPrompt.resolve?.(false);
+        }
+        break;
+      }
       case AuthorizationCondition.SINGLE:
         openPrompt.resolve?.(true);
         break;

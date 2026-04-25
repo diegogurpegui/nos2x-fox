@@ -20,7 +20,8 @@ import {
   derivePublicKeyFromPrivateKey,
   canDerivePublicKeyFromPrivateKey,
   formatPrivateKeyForDisplay,
-  validatePrivateKeyFormat
+  validatePrivateKeyFormat,
+  formatPermissionConditionLabel
 } from './common';
 import logotype from './assets/logo/logotype.png';
 import AddCircleIcon from './assets/icons/add-circle-outline.svg';
@@ -62,6 +63,7 @@ function Options() {
       level: number;
       condition: string;
       created_at: number;
+      duration_seconds?: number;
     }[]
   >();
   let [message, setMessage] = useState('');
@@ -450,12 +452,15 @@ function Options() {
     console.debug('Converting permissions to UI', permissions);
     if (!permissions) return undefined;
 
-    return Object.entries(permissions).map(([host, { level, condition, created_at }]) => ({
-      host,
-      level,
-      condition,
-      created_at
-    }));
+    return Object.entries(permissions).map(
+      ([host, { level, condition, created_at, duration_seconds }]) => ({
+        host,
+        level,
+        condition,
+        created_at,
+        duration_seconds
+      })
+    );
   }
 
   async function handleRevoke(e) {
@@ -695,11 +700,11 @@ function Options() {
                   </tr>
                 </thead>
                 <tbody>
-                  {permissions.map(({ host, level, condition, created_at }) => (
+                  {permissions.map(({ host, level, condition, created_at, duration_seconds }) => (
                     <tr key={host}>
                       <td>{host}</td>
                       <td>{getPermissionsString(level)}</td>
-                      <td>{condition}</td>
+                      <td>{formatPermissionConditionLabel(condition, duration_seconds)}</td>
                       <td
                         className="help-cursor"
                         title={formatDistance(new Date(created_at * 1000), new Date())}

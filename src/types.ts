@@ -49,6 +49,8 @@ export type PermissionConfig = {
     condition: string;
     created_at: number;
     level: number;
+    /** Present when `condition` is `expirable_custom`; TTL in seconds from `created_at`. */
+    duration_seconds?: number;
   };
 };
 
@@ -71,6 +73,7 @@ export enum AuthorizationCondition {
   EXPIRABLE_5M = 'expirable_5m',
   EXPIRABLE_1H = 'expirable_1h',
   EXPIRABLE_8H = 'expirable_8h',
+  EXPIRABLE_CUSTOM = 'expirable_custom',
   SINGLE = 'single'
 }
 
@@ -82,6 +85,8 @@ export type PromptResponse = {
   condition: AuthorizationCondition;
   host: string | null;
   level?: number;
+  /** Required when `condition` is `expirable_custom`: grant length in whole seconds. */
+  durationSeconds?: number;
 };
 
 export type PromptParams = {

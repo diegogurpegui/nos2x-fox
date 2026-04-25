@@ -648,6 +648,38 @@ input,
     margin: 0.5em;
   }
 
+  .prompt-custom-duration {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5em;
+    margin: 0.5em;
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+
+  .prompt-custom-duration-label {
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .prompt-custom-duration-input {
+    width: 5em;
+    min-width: 4em;
+  }
+
+  .prompt-custom-duration-unit {
+    min-width: 7em;
+  }
+
+  .prompt-custom-duration-error {
+    color: #b00020;
+    font-size: 0.9em;
+    margin: 0 0.5em 0.5em;
+    text-align: center;
+    flex: 1 1 100%;
+  }
+
   .close-confirm-dialog-wrapper {
     position: fixed;
     top: 0;

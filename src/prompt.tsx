@@ -7,7 +7,9 @@ import {
   convertHexToUint8Array,
   getAllowedCapabilities,
   truncatePublicKeys,
-  derivePublicKeyFromPrivateKey
+  derivePublicKeyFromPrivateKey,
+  customAuthorizationDurationSeconds,
+  type AuthorizationTimeUnit
 } from './common';
 import { AuthorizationCondition, KindNames, ProfileConfig, PromptResponse } from './types';
 import * as Storage from './storage';
@@ -33,6 +35,11 @@ function Prompt() {
   const [kind, setKind] = useState<number | null>(null);
 
   const [showCloseConfirmation, setShowCloseConfirmation] = useState(false);
+
+  const [customDurationAmount, setCustomDurationAmount] = useState<string>('1');
+  const [customDurationUnit, setCustomDurationUnit] = useState<AuthorizationTimeUnit>('minutes');
+  const [customDurationError, setCustomDurationError] = useState<string>('');
+  const [showCustomDurationSection, setShowCustomDurationSection] = useState(false);
 
   useEffect(() => {
     Storage.getActiveProfile().then(profile => {
@@ -60,6 +67,11 @@ function Prompt() {
       console.error('Error parsing params.', err);
     }
   }, [activePromptIndex, openPrompts]);
+
+  useEffect(() => {
+    setCustomDurationError('');
+    setShowCustomDurationSection(false);
+  }, [activePromptIndex]);
 
   useEffect(() => {
     // if there are more than one prompt, then set the onbeforeunload
@@ -107,24 +119,53 @@ function Prompt() {
     return rangeEntry ? rangeEntry[1] : null;
   }
 
-  function authorizeHandler(condition) {
-    return function (ev) {
-      ev.preventDefault();
-
-      // if no promps this shouldn't be valid (it won't be called anyway)
-      if (!openPrompts || !openPrompts.length) {
-        return;
-      }
-
-      const promptResponse: PromptResponse = {
-        prompt: true,
-        id: openPrompts[activePromptIndex].id,
-        host: openPrompts[activePromptIndex].host,
-        level: openPrompts[activePromptIndex].level,
-        condition
-      };
-      browser.runtime.sendMessage(promptResponse);
+  function submitAuthorization(condition: AuthorizationCondition, durationSeconds?: number) {
+    if (!openPrompts?.length) {
+      return;
+    }
+    const promptResponse: PromptResponse = {
+      prompt: true,
+      id: openPrompts[activePromptIndex].id,
+      host: openPrompts[activePromptIndex].host,
+      level: openPrompts[activePromptIndex].level,
+      condition
     };
+    if (durationSeconds != null) {
+      promptResponse.durationSeconds = durationSeconds;
+    }
+    browser.runtime.sendMessage(promptResponse);
+  }
+
+  function authorizeHandler(condition: AuthorizationCondition) {
+    return function (ev: React.MouseEvent) {
+      ev.preventDefault();
+      setCustomDurationError('');
+      setShowCustomDurationSection(false);
+      submitAuthorization(condition);
+    };
+  }
+
+  function handleShowCustomDurationSection(ev: React.MouseEvent) {
+    ev.preventDefault();
+    setCustomDurationError('');
+    setShowCustomDurationSection(true);
+  }
+
+  function handleCustomDurationAuthorize(ev: React.MouseEvent) {
+    ev.preventDefault();
+    if (!openPrompts?.length) {
+      return;
+    }
+    const parsedAmount = parseInt(String(customDurationAmount).trim(), 10);
+    const durationSeconds = customAuthorizationDurationSeconds(parsedAmount, customDurationUnit);
+    if (durationSeconds == null) {
+      setCustomDurationError(
+        'Enter a whole number from 1 upward. The total duration cannot exceed 366 days.'
+      );
+      return;
+    }
+    setCustomDurationError('');
+    submitAuthorization(AuthorizationCondition.EXPIRABLE_CUSTOM, durationSeconds);
   }
 
   function movePrompt(direction: number) {
@@ -230,7 +271,52 @@ function Prompt() {
           >
             8 h
           </button>
+          <button type="button" className="button" onClick={handleShowCustomDurationSection}>
+            Custom
+          </button>
         </div>
+        {showCustomDurationSection ? (
+          <>
+            <div className="prompt-custom-duration">
+              <label className="prompt-custom-duration-label" htmlFor="custom-duration-amount">
+                Authorize for
+              </label>
+              <input
+                id="custom-duration-amount"
+                type="number"
+                min={1}
+                inputMode="numeric"
+                className="prompt-custom-duration-input"
+                value={customDurationAmount}
+                onChange={e => {
+                  setCustomDurationAmount(e.target.value);
+                  setCustomDurationError('');
+                }}
+              />
+              <select
+                className="prompt-custom-duration-unit"
+                value={customDurationUnit}
+                onChange={e => {
+                  setCustomDurationUnit(e.target.value as AuthorizationTimeUnit);
+                  setCustomDurationError('');
+                }}
+              >
+                <option value="minutes">minutes</option>
+                <option value="hours">hours</option>
+                <option value="days">days</option>
+              </select>
+              <button type="button" className="button" onClick={handleCustomDurationAuthorize}>
+                <TimerIcon />
+                Apply
+              </button>
+            </div>
+            {customDurationError ? (
+              <p className="prompt-custom-duration-error" role="alert">
+                {customDurationError}
+              </p>
+            ) : null}
+          </>
+        ) : null}
         <button
           className="button button-success"
           onClick={authorizeHandler(AuthorizationCondition.SINGLE)}

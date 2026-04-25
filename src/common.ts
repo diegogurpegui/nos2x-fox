@@ -1,6 +1,8 @@
 import browser from 'webextension-polyfill';
 import { getPublicKey, nip19 } from 'nostr-tools';
 
+import { AuthorizationCondition } from './types';
+
 export const PERMISSIONS_REQUIRED = {
   getPublicKey: 1,
   getRelays: 5,
@@ -27,6 +29,20 @@ const PERMISSION_NAMES: Record<keyof typeof PERMISSIONS_REQUIRED, string> = {
   'nip44.encrypt': 'encrypt messages to peers (nip44)',
   'nip44.decrypt': 'decrypt messages from peers (nip44)'
 };
+
+export type AuthorizationTimeUnit = 'minutes' | 'hours' | 'days';
+
+const AUTHORIZATION_TIME_UNIT_SECONDS: Record<AuthorizationTimeUnit, number> = {
+  minutes: 60,
+  hours: 60 * 60,
+  days: 24 * 60 * 60
+};
+
+/** Minimum custom grant length (one minute). */
+export const MIN_CUSTOM_AUTHORIZATION_SECONDS = 60;
+
+/** Maximum custom grant length (366 days). */
+export const MAX_CUSTOM_AUTHORIZATION_SECONDS = 366 * 24 * 60 * 60;
 
 /**
  * Returns a list of capabilities that are allowed based on the provided
@@ -72,6 +88,125 @@ export function getPermissionsString(permission: number) {
     ' and ' +
     capabilities[capabilities.length - 1]
   );
+}
+
+/**
+ * Whole-number amount × unit → seconds for a custom time-limited grant, or null if out of range / invalid.
+ */
+export function customAuthorizationDurationSeconds(
+  amount: number,
+  unit: AuthorizationTimeUnit
+): number | null {
+  if (!Number.isFinite(amount) || amount <= 0 || !Number.isInteger(amount)) {
+    return null;
+  }
+  const unitSeconds = AUTHORIZATION_TIME_UNIT_SECONDS[unit];
+  const totalSeconds = amount * unitSeconds;
+  if (
+    totalSeconds < MIN_CUSTOM_AUTHORIZATION_SECONDS ||
+    totalSeconds > MAX_CUSTOM_AUTHORIZATION_SECONDS
+  ) {
+    return null;
+  }
+  return totalSeconds;
+}
+
+/** TTL in seconds for fixed expiring conditions; null if not a fixed expiring kind. */
+export function fixedExpiringPermissionTtlSeconds(condition: string): number | null {
+  switch (condition) {
+    case AuthorizationCondition.EXPIRABLE_5M:
+      return 5 * 60;
+    case AuthorizationCondition.EXPIRABLE_1H:
+      return 60 * 60;
+    case AuthorizationCondition.EXPIRABLE_8H:
+      return 8 * 60 * 60;
+    default:
+      return null;
+  }
+}
+
+/**
+ * Whether a stored permission row should be removed as expired or invalid.
+ * `nowSeconds` is Unix time in seconds (same basis as `created_at`).
+ */
+export function shouldRemoveStoredPermission(
+  condition: string,
+  createdAtSeconds: number,
+  nowSeconds: number,
+  durationSeconds?: number
+): boolean {
+  if (condition === AuthorizationCondition.EXPIRABLE_CUSTOM) {
+    if (
+      durationSeconds == null ||
+      !Number.isFinite(durationSeconds) ||
+      durationSeconds < MIN_CUSTOM_AUTHORIZATION_SECONDS ||
+      durationSeconds > MAX_CUSTOM_AUTHORIZATION_SECONDS
+    ) {
+      return true;
+    }
+    return createdAtSeconds < nowSeconds - durationSeconds;
+  }
+  const fixedTtl = fixedExpiringPermissionTtlSeconds(condition);
+  if (fixedTtl == null) {
+    return false;
+  }
+  return createdAtSeconds < nowSeconds - fixedTtl;
+}
+
+/** Human-readable label for the options permissions table. */
+export function formatPermissionConditionLabel(
+  condition: string,
+  durationSeconds?: number
+): string {
+  switch (condition) {
+    case AuthorizationCondition.FOREVER:
+      return 'forever';
+    case AuthorizationCondition.EXPIRABLE_5M:
+      return '5 minutes';
+    case AuthorizationCondition.EXPIRABLE_1H:
+      return '1 hour';
+    case AuthorizationCondition.EXPIRABLE_8H:
+      return '8 hours';
+    case AuthorizationCondition.EXPIRABLE_CUSTOM:
+      return durationSeconds != null
+        ? `custom (${formatAuthorizationDurationHuman(durationSeconds)})`
+        : 'custom';
+    default:
+      return condition;
+  }
+}
+
+function formatAuthorizationDurationHuman(totalSeconds: number): string {
+  const days = Math.floor(totalSeconds / (24 * 60 * 60));
+  const hours = Math.floor((totalSeconds % (24 * 60 * 60)) / (60 * 60));
+  const minutes = Math.floor((totalSeconds % (60 * 60)) / 60);
+  const parts: string[] = [];
+  if (days > 0) {
+    parts.push(`${days} day${days === 1 ? '' : 's'}`);
+  }
+  if (hours > 0) {
+    parts.push(`${hours} hour${hours === 1 ? '' : 's'}`);
+  }
+  if (minutes > 0 || parts.length === 0) {
+    parts.push(`${minutes} minute${minutes === 1 ? '' : 's'}`);
+  }
+  return parts.join(', ');
+}
+
+/**
+ * Validates seconds for a custom grant (e.g. from a prompt message). Returns null if invalid.
+ */
+export function normalizeCustomAuthorizationDurationSeconds(
+  durationSeconds: unknown
+): number | null {
+  if (typeof durationSeconds !== 'number' || !Number.isFinite(durationSeconds)) {
+    return null;
+  }
+  const rounded = Math.round(durationSeconds);
+  if (rounded < MIN_CUSTOM_AUTHORIZATION_SECONDS || rounded > MAX_CUSTOM_AUTHORIZATION_SECONDS) {
+    return null;
+  }
+  return rounded;
 }
 
 export function truncatePublicKeys(
