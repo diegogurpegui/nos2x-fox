@@ -9,7 +9,7 @@
       "update_url": "https://diegogurpegui.com/nos2x-fox/updates.json"
     }
   },
-  "manifest_version": 2,
+  "manifest_version": 3,
   "icons": {
     "16": "assets/logo/16x16.png",
     "32": "assets/logo/32x32.png",
@@ -18,13 +18,12 @@
     "128": "assets/logo/128x128.png"
   },
   "options_ui": {
-    "page": "options.html",
-    "browser_style": true
+    "page": "options.html"
   },
   "background": {
     "scripts": ["background.js"]
   },
-  "browser_action": {
+  "action": {
     "default_title": "nos2x-fox",
     "default_popup": "popup.html"
   },
@@ -35,7 +34,14 @@
       "js": ["content-script.js"]
     }
   ],
-  "permissions": ["storage"],
-  "web_accessible_resources": ["nostr-provider.js"],
-  "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self';"
+  "permissions": ["storage", "activeTab"],
+  "web_accessible_resources": [
+    {
+      "resources": ["nostr-provider.js"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'"
+  }
 }
