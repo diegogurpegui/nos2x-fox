@@ -19,6 +19,7 @@ import {
   isPrivateKeyEncrypted,
   derivePublicKeyFromPrivateKey,
   canDerivePublicKeyFromPrivateKey,
+  findExistingProfileByPrivateKey,
   formatPrivateKeyForDisplay,
   validatePrivateKeyFormat,
   formatPermissionConditionLabel
@@ -260,16 +261,17 @@ function Options() {
     if (!newProfile) {
       console.warn(`The imported profile is empty.`);
       showMessage(`The imported profile is invalid.`, 'warning');
+      return;
     }
 
     // Determine public key before storing
     const pinEnabled = await Storage.isPinEnabled();
+    const existingProfiles = await Storage.readProfiles();
     let newPubKey: string;
 
     if (!canDerivePublicKeyFromPrivateKey(newProfile.privateKey, pinEnabled)) {
       // PIN enabled and private key is encrypted - can't derive public key
       // Try to find existing profile with same encrypted key, or require public key
-      const existingProfiles = await Storage.readProfiles();
       const matchingProfile = Object.entries(existingProfiles).find(
         ([_, p]) => p.privateKey === newProfile.privateKey
       );
@@ -286,6 +288,57 @@ function Options() {
     } else {
       // Derive public key from plain-text private key
       newPubKey = derivePublicKeyFromPrivateKey(newProfile.privateKey);
+    }
+
+    const duplicatePubKey = findExistingProfileByPrivateKey(
+      newProfile.privateKey,
+      existingProfiles,
+      pinEnabled,
+      newPubKey
+    );
+    if (duplicatePubKey) {
+      const existingProfile = existingProfiles[duplicatePubKey];
+      const profileLabel = existingProfile?.name
+        ? `"${existingProfile.name}"`
+        : nip19.npubEncode(duplicatePubKey);
+      if (
+        !window.confirm(
+          `A profile with this private key already exists (${profileLabel}). Import anyway? This will overwrite the existing profile.`
+        )
+      ) {
+        return;
+      }
+    }
+
+    // If PIN protection is enabled, encrypt the private key before saving
+    if (pinEnabled && newProfile.privateKey && !isPrivateKeyEncrypted(newProfile.privateKey)) {
+      try {
+        const encryptResponse: { success: boolean; encryptedKey?: string; error?: string } =
+          (await browser.runtime.sendMessage({
+            type: 'encryptPrivateKey',
+            privateKey: newProfile.privateKey
+          })) as any;
+
+        if (!encryptResponse || !encryptResponse.success) {
+          showMessage(
+            encryptResponse?.error ||
+              'Failed to encrypt private key. PIN is required when PIN protection is enabled.',
+            'warning'
+          );
+          return;
+        }
+
+        if (!encryptResponse.encryptedKey) {
+          showMessage('Failed to encrypt private key: no encrypted key returned', 'warning');
+          return;
+        }
+
+        newProfile.privateKey = encryptResponse.encryptedKey;
+      } catch (error) {
+        console.error('Error encrypting private key:', error);
+        showMessage('Failed to encrypt private key. ' + error.message, 'warning');
+        return;
+      }
     }
 
     // store the new profile

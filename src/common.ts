@@ -1,7 +1,7 @@
 import browser from 'webextension-polyfill';
 import { getPublicKey, nip19 } from 'nostr-tools';
 
-import { AuthorizationCondition } from './types';
+import { AuthorizationCondition, ProfilesConfig } from './types';
 
 export const PERMISSIONS_REQUIRED = {
   getPublicKey: 1,
@@ -332,6 +332,35 @@ export function derivePublicKeyFromPrivateKey(privateKey: string): string {
 export function canDerivePublicKeyFromPrivateKey(privateKey: string, pinEnabled: boolean): boolean {
   if (!privateKey) return false;
   return !(pinEnabled && isPrivateKeyEncrypted(privateKey));
+}
+
+/**
+ * Finds an existing profile that uses the same private key as the one being imported.
+ * @returns The public key of the matching profile, or undefined if none found
+ */
+export function findExistingProfileByPrivateKey(
+  importedPrivateKey: string | undefined,
+  existingProfiles: ProfilesConfig,
+  pinEnabled: boolean,
+  derivedPublicKey?: string
+): string | undefined {
+  if (!importedPrivateKey) return undefined;
+
+  const exactMatch = Object.entries(existingProfiles).find(
+    ([, profile]) => profile.privateKey === importedPrivateKey
+  );
+  if (exactMatch) return exactMatch[0];
+
+  if (
+    pinEnabled &&
+    derivedPublicKey &&
+    !isPrivateKeyEncrypted(importedPrivateKey) &&
+    existingProfiles[derivedPublicKey]
+  ) {
+    return derivedPublicKey;
+  }
+
+  return undefined;
 }
 
 /**
