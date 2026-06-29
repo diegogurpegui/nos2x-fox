@@ -20,11 +20,21 @@ import {
 import { encryptPrivateKey, decryptPrivateKey } from './pinEncryption';
 import { clearStringReference } from './memoryUtils';
 
+/**
+ * Reads the active profile's plain-text private key from storage.
+ * When PIN protection is enabled, the plain-text key is not stored and this returns an empty string.
+ */
 export async function readActivePrivateKey(): Promise<string> {
   const data = await browser.storage.local.get(ConfigurationKeys.PRIVATE_KEY);
   return data[ConfigurationKeys.PRIVATE_KEY] as string;
 }
 
+/**
+ * Stores or removes the active profile's plain-text private key.
+ * Also updates the stored active public key when a key is set.
+ * @param privateKey - Hex private key, or empty string to clear the active profile
+ * @throws Error when PIN protection is enabled and a non-empty key is provided
+ */
 export async function updateActivePrivateKey(privateKey: string) {
   // Critical: If PIN protection is enabled, reject plain-text storage
   const pinEnabled = await isPinEnabled();
@@ -289,10 +299,19 @@ export async function getDecryptedProfilePrivateKey(
 
 //#endregion PIN Protection <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+/**
+ * Reads the relay list configured on the active profile.
+ */
 export async function readActiveRelays(): Promise<RelaysConfig> {
   const activeProfile = await getActiveProfile();
   return activeProfile.relays || {};
 }
+/**
+ * Updates the relay list for a profile.
+ * @param profilePublicKey - Public key identifying the profile
+ * @param newRelays - New relay configuration, or falsy to skip the update
+ * @returns Updated profiles config, or undefined if the profile was not found
+ */
 export async function updateRelays(
   profilePublicKey: string,
   newRelays
@@ -308,6 +327,10 @@ export async function updateRelays(
   }
 }
 
+/**
+ * Reads permissions for the active profile, removing any that have expired.
+ * Persists the pruned list when expired entries are removed.
+ */
 export async function readActivePermissions(): Promise<PermissionConfig> {
   const activeProfile = await getActiveProfile();
 
@@ -343,6 +366,13 @@ export async function readActivePermissions(): Promise<PermissionConfig> {
 
   return permissions;
 }
+/**
+ * Grants or updates a site permission on the active profile.
+ * @param host - Origin host the permission applies to
+ * @param condition - Authorization condition (e.g. always, expirable)
+ * @param level - Permission level determining allowed capabilities
+ * @param durationSeconds - TTL in seconds for custom expirable grants
+ */
 export async function addActivePermission(
   host: string,
   condition: string,
@@ -374,6 +404,11 @@ export async function addActivePermission(
   }
   return updateProfile(profile, activePublicKey);
 }
+/**
+ * Removes a site permission from a profile.
+ * @param profilePublicKey - Public key identifying the profile
+ * @param host - Origin host whose permission should be removed
+ */
 export async function removePermissions(
   profilePublicKey: string,
   host: string
@@ -389,6 +424,11 @@ export async function removePermissions(
 }
 
 //#region Profiles >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+/**
+ * Reads all stored profiles.
+ * When no profiles exist and PIN is disabled, initializes one from the active private key if present.
+ */
 export async function readProfiles(): Promise<ProfilesConfig> {
   const { profiles = {} } = (await browser.storage.local.get(ConfigurationKeys.PROFILES)) as {
     [ConfigurationKeys.PROFILES]: ProfilesConfig;
@@ -424,10 +464,19 @@ export async function readProfiles(): Promise<ProfilesConfig> {
 
   return profiles;
 }
+/**
+ * Returns a single profile by public key.
+ * @param publicKey - Hex public key of the profile
+ */
 export async function getProfile(publicKey: string): Promise<ProfileConfig> {
   const profiles = await readProfiles();
   return profiles[publicKey];
 }
+/**
+ * Persists the full profiles map.
+ * When there is exactly one profile and no active private key, sets it as the active profile.
+ * @param profiles - Complete profiles configuration to store
+ */
 export async function updateProfiles(profiles: ProfilesConfig): Promise<ProfilesConfig> {
   await browser.storage.local.set({
     [ConfigurationKeys.PROFILES]: profiles
@@ -457,6 +506,13 @@ export async function updateProfiles(profiles: ProfilesConfig): Promise<Profiles
 
   return profiles;
 }
+/**
+ * Adds a new profile to storage.
+ * When it is the first profile, sets it as the active profile.
+ * @param profile - Profile data to add
+ * @param publicKey - Public key to use; required when the private key is encrypted
+ * @throws Error when PIN protection is enabled and the private key is not encrypted
+ */
 export async function addProfile(
   profile: ProfileConfig,
   publicKey?: string
@@ -515,6 +571,12 @@ export async function addProfile(
 
   return profiles;
 }
+/**
+ * Updates an existing profile in storage.
+ * @param profile - Updated profile data
+ * @param publicKey - Public key of the profile to update; required when multiple encrypted profiles exist
+ * @throws Error when PIN protection is enabled and a plain-text private key is provided without a matching encrypted key in storage
+ */
 export async function updateProfile(
   profile: ProfileConfig,
   publicKey?: string
@@ -585,6 +647,11 @@ export async function updateProfile(
 
   return profiles;
 }
+/**
+ * Deletes a profile and switches the active profile if the deleted one was active.
+ * @param profilePublicKey - Public key of the profile to delete
+ * @returns The updated profiles configuration
+ */
 export async function deleteProfile(profilePublicKey: string): Promise<ProfilesConfig> {
   console.debug(`Deleting profile: ${profilePublicKey}...`);
   const profiles = await readProfiles();
@@ -638,6 +705,11 @@ export async function deleteProfile(profilePublicKey: string): Promise<ProfilesC
 
   return profiles;
 }
+/**
+ * Returns the currently active profile.
+ * Resolves the active public key from storage, with fallbacks for legacy data.
+ * @throws Error when the active profile cannot be determined or is missing from storage
+ */
 export async function getActiveProfile(): Promise<ProfileConfig> {
   // Always use stored active public key for consistent behavior
   let publicKey = await getActivePublicKey();
@@ -674,6 +746,9 @@ export async function getActiveProfile(): Promise<ProfileConfig> {
 }
 //#endregion Profiles <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
+/**
+ * Reads the queue of open signing prompts from storage.
+ */
 export async function readOpenPrompts(): Promise<OpenPromptItem[]> {
   const openPromptsData = await browser.storage.local.get(ConfigurationKeys.OPEN_PROMPTS);
   // parse from JSON string
@@ -681,6 +756,10 @@ export async function readOpenPrompts(): Promise<OpenPromptItem[]> {
   return JSON.parse(openPromptStr) as OpenPromptItem[];
 }
 
+/**
+ * Persists the queue of open signing prompts.
+ * @param openPrompts - Prompt items to store
+ */
 export async function updateOpenPrompts(openPrompts: OpenPromptItem[]) {
   // stringify to JSON to make the change listeners fire (Firefox bug?)
   const openPromptsStr = JSON.stringify(openPrompts);
@@ -691,6 +770,10 @@ export async function updateOpenPrompts(openPrompts: OpenPromptItem[]) {
   return openPrompts;
 }
 
+/**
+ * Registers a listener for changes to the open prompts queue.
+ * @param callback - Called with the new prompt list when storage changes
+ */
 export function addOpenPromptChangeListener(callback: (newOpenPrompts: OpenPromptItem[]) => void) {
   return browser.storage.onChanged.addListener(changes => {
     // only notify if there's a change with Open Prompts
@@ -700,18 +783,22 @@ export function addOpenPromptChangeListener(callback: (newOpenPrompts: OpenPromp
     }
   });
 }
+/**
+ * Unregisters a listener previously added by {@link addOpenPromptChangeListener}.
+ * @param listener - The listener function to remove
+ */
 export function removeOpenPromptChangeListener(listener) {
   return browser.storage.onChanged.removeListener(listener);
 }
 
 /**
- * Clear the entire configuration
- * @returns
+ * Clears all extension configuration from local storage.
  */
 export async function empty(): Promise<void> {
   return await browser.storage.local.clear();
 }
 
+/** Removes legacy storage keys that are no longer used. */
 async function clearUnused(): Promise<void> {
   return await browser.storage.local.remove([
     'relays', // no longer used

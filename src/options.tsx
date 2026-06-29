@@ -360,13 +360,23 @@ function Options() {
   async function handleDeleteProfileClick(e) {
     e.preventDefault();
     if (window.confirm(`Delete the profile "${nip19.npubEncode(selectedProfilePubKey)}"?`)) {
-      // delete from storage
-      await Storage.deleteProfile(selectedProfilePubKey);
-      // now update component
-      const updateProfiles = profiles;
-      delete updateProfiles[selectedProfilePubKey];
-      console.debug('updated profiles', updateProfiles);
-      setProfiles(updateProfiles);
+      const updatedProfiles = await Storage.deleteProfile(selectedProfilePubKey);
+      setProfiles({ ...updatedProfiles });
+
+      // if no profiles left, set the default values
+      const remainingKeys = Object.keys(updatedProfiles);
+      if (remainingKeys.length === 0) {
+        setSelectedProfilePubKey('');
+        setRelays([]);
+        setPermissions(undefined);
+        setPrivateKey('');
+        return;
+      }
+
+      const activePublicKey = await Storage.getActivePublicKey();
+      setSelectedProfilePubKey(
+        activePublicKey && activePublicKey in updatedProfiles ? activePublicKey : remainingKeys[0]
+      );
     }
   }
 
