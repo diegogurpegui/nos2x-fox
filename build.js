@@ -17,7 +17,8 @@ esbuild
     entryPoints: {
       // code
       background: './src/background.ts',
-      'content-script': './src/content-script.js',
+      'content-script': './src/content-script.ts',
+      'nostr-handler': './src/nostr-handler.ts',
       'nostr-provider': './src/nostr-provider.js',
       types: './src/types.ts',
       storage: './src/storage.ts',

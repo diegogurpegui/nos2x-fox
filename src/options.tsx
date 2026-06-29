@@ -15,6 +15,7 @@ import {
   getPermissionsString,
   isHexadecimal,
   isValidRelayURL,
+  isValidNostrLinkHandlerTemplate,
   truncatePublicKeys,
   isPrivateKeyEncrypted,
   derivePublicKeyFromPrivateKey,
@@ -73,6 +74,8 @@ function Options() {
   let [version, setVersion] = useState('0.0.0');
   let [pinEnabled, setPinEnabled] = useState(false);
   let [pinCacheDuration, setPinCacheDuration] = useState<number>(10 * 1000); // Default: 10 seconds
+  let [nostrLinkHandlerUrl, setNostrLinkHandlerUrl] = useState('');
+  let [isNostrLinkHandlerUrlValid, setNostrLinkHandlerUrlValid] = useState(true);
 
   /**
    * Load options from Storage
@@ -114,6 +117,10 @@ function Options() {
     Storage.getPinCacheDuration().then(duration => {
       setPinCacheDuration(duration);
     });
+
+    Storage.getNostrLinkHandlerUrlTemplate().then(template => {
+      setNostrLinkHandlerUrl(template);
+    });
   }, []);
 
   /**
@@ -126,6 +133,21 @@ function Options() {
       ?.then(() => console.log('Relays stored.'))
       .catch(err => console.error('Error storing relays', err));
   }, [relays]);
+
+  const saveNostrLinkHandlerUrl = useDebouncedCallback(async (template: string) => {
+    const trimmed = template.trim();
+    if (trimmed && !isValidNostrLinkHandlerTemplate(trimmed)) {
+      setNostrLinkHandlerUrlValid(false);
+      return;
+    }
+
+    setNostrLinkHandlerUrlValid(true);
+    await Storage.setNostrLinkHandlerUrlTemplate(trimmed);
+    showMessage(
+      trimmed ? 'Nostr link handler saved' : 'Nostr link handler disabled',
+      'success'
+    );
+  }, 700);
 
   /**
    * When selected public key changes
@@ -632,6 +654,16 @@ function Options() {
 
   //#endregion Relays
 
+  function handleNostrLinkHandlerUrlChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const value = e.target.value;
+    setNostrLinkHandlerUrl(value);
+    const valid = !value.trim() || isValidNostrLinkHandlerTemplate(value);
+    setNostrLinkHandlerUrlValid(valid);
+    if (valid) {
+      saveNostrLinkHandlerUrl(value);
+    }
+  }
+
   async function handleClearStorageClick() {
     if (confirm('Are you sure you want to delete everything from this browser?')) {
       await Storage.empty();
@@ -834,6 +866,27 @@ function Options() {
             <button disabled={!isRelayURLValid()} onClick={handleAddRelayClick}>
               Add relay
             </button>
+          </div>
+        </section>
+
+        <section>
+          <h3>Nostr links</h3>
+          <p className="text-help">
+            When set, clicking <code>nostr:</code> links opens the URL below. Use <code>%s</code>{' '}
+            for the part after <code>nostr:</code> (for example,{' '}
+            <code>https://iris.to/%s</code> or <code>http://localhost:3000/%s</code>). Leave blank
+            to disable.
+          </p>
+          <div
+            className={`form-field ${!isNostrLinkHandlerUrlValid ? 'validation-error' : ''}`}
+          >
+            <label htmlFor="nostr-link-handler-url">Handler URL template:</label>
+            <input
+              id="nostr-link-handler-url"
+              placeholder="https://iris.to/%s"
+              value={nostrLinkHandlerUrl}
+              onChange={handleNostrLinkHandlerUrlChange}
+            />
           </div>
         </section>
 

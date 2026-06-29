@@ -228,6 +228,34 @@ export function isValidRelayURL(url: string): boolean {
   return url != null && url.trim() != '' && url.startsWith('wss://');
 }
 
+/**
+ * Validates a nostr link handler URL template. Empty is valid (feature disabled).
+ * Non-empty templates must contain a %s placeholder and form a parseable URL.
+ */
+export function isValidNostrLinkHandlerTemplate(template: string): boolean {
+  const trimmed = template.trim();
+  if (!trimmed) return true;
+  if (!trimmed.includes('%s')) return false;
+
+  try {
+    new URL(trimmed.replace('%s', 'npub1test'));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Builds the destination URL from a template and a nostr: href. */
+export function buildNostrLinkUrl(template: string, nostrHref: string): string | null {
+  const colonIndex = nostrHref.indexOf(':');
+  if (colonIndex === -1) return null;
+
+  const payload = nostrHref.slice(colonIndex + 1);
+  if (!payload) return null;
+
+  return template.replace('%s', encodeURIComponent(payload));
+}
+
 export function isHexadecimal(value: string) {
   return /^[0-9A-Fa-f]+$/g.test(value);
 }

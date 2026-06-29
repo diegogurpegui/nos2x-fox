@@ -37,7 +37,8 @@ export enum ConfigurationKeys {
   PIN_ENABLED = 'pin_enabled',
   ENCRYPTED_PRIVATE_KEY = 'encrypted_private_key',
   ACTIVE_PUBLIC_KEY = 'active_public_key',
-  PIN_CACHE_DURATION = 'pin_cache_duration'
+  PIN_CACHE_DURATION = 'pin_cache_duration',
+  NOSTR_LINK_HANDLER_URL = 'nostr_link_handler_url'
 }
 
 export type RelaysConfig = {

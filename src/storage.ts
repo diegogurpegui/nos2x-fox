@@ -97,6 +97,23 @@ export async function setPinCacheDuration(durationMs: number): Promise<void> {
 }
 
 /**
+ * Gets the URL template for handling nostr: links. Empty string means disabled.
+ */
+export async function getNostrLinkHandlerUrlTemplate(): Promise<string> {
+  const data = await browser.storage.local.get(ConfigurationKeys.NOSTR_LINK_HANDLER_URL);
+  return (data[ConfigurationKeys.NOSTR_LINK_HANDLER_URL] as string) ?? '';
+}
+
+/**
+ * Sets the URL template for handling nostr: links. Pass an empty string to disable.
+ */
+export async function setNostrLinkHandlerUrlTemplate(template: string): Promise<void> {
+  await browser.storage.local.set({
+    [ConfigurationKeys.NOSTR_LINK_HANDLER_URL]: template
+  });
+}
+
+/**
  * Gets the encrypted private key from storage
  */
 export async function getEncryptedPrivateKey(): Promise<string | null> {
