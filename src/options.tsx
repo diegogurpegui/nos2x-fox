@@ -545,24 +545,35 @@ function Options() {
     console.debug('Converting permissions to UI', permissions);
     if (!permissions) return undefined;
 
-    return Object.entries(permissions).map(
-      ([host, { level, condition, created_at, duration_seconds, decision }]) => ({
+    return Object.entries(permissions)
+      .map(([host, { level, condition, created_at, duration_seconds, decision }]) => ({
         host,
         level,
         condition,
         created_at,
         duration_seconds,
         decision
-      })
-    );
+      }))
+      .sort((a, b) => {
+        // rejections first: a site that is being refused never prompts again, so this
+        // page is the only place the decision can be undone
+        const aDenied = a.decision === PermissionDecision.DENY ? 0 : 1;
+        const bDenied = b.decision === PermissionDecision.DENY ? 0 : 1;
+        return aDenied - bDenied || b.created_at - a.created_at;
+      });
   }
 
   async function handleRevoke(e) {
     e.preventDefault();
-    let host = e.target.dataset.domain;
-    if (window.confirm(`Revoke all permissions from ${host}?`)) {
+    const { domain: host, decision } = e.target.dataset;
+    const isDenied = decision === PermissionDecision.DENY;
+    const question = isDenied
+      ? `Let ${host} ask for permission again?`
+      : `Revoke all permissions from ${host}?`;
+
+    if (window.confirm(question)) {
       await Storage.removePermissions(selectedProfilePubKey, host);
-      showMessage(`Removed permissions from ${host}`);
+      showMessage(isDenied ? `${host} can ask again` : `Removed permissions from ${host}`);
       reloadSelectedProfile();
     }
   }
@@ -791,6 +802,10 @@ function Options() {
 
         <section>
           <h3>Permissions</h3>
+          <p className="text-help">
+            Decisions you asked this extension to remember. A rejected site is refused without
+            showing a prompt, so this is the only place to let it ask again.
+          </p>
           {permissions && permissions.length > 0 ? (
             <>
               <table>
@@ -819,8 +834,12 @@ function Options() {
                           {format(new Date(created_at * 1000), 'yyyy-MM-dd HH:mm:ss')}
                         </td>
                         <td>
-                          <button onClick={handleRevoke} data-domain={host}>
-                            revoke
+                          <button
+                            onClick={handleRevoke}
+                            data-domain={host}
+                            data-decision={decision}
+                          >
+                            {decision === PermissionDecision.DENY ? 'unblock' : 'revoke'}
                           </button>
                         </td>
                       </tr>
