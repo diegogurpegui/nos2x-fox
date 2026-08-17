@@ -29,6 +29,13 @@ async window.nostr.nip44.decrypt(peer, ciphertext): string // takes peer pubkey,
 * By yourself from file: look into [Releases](https://github.com/diegogurpegui/nos2x-fox/releases)
 * From the site [Firefox Add-on](https://addons.mozilla.org/en-US/firefox/addon/nos2x-fox/)
 
+## Turning the signer on and off
+
+Click the nos2x-fox icon in the toolbar and use the switch at the top of the popup to turn the
+signer off for every website at once. While it is off, `window.nostr` calls are refused right away
+and no authorization prompt appears; the toolbar icon shows an `OFF` badge. Your keys, relays and
+permissions are kept, so flipping the switch back on restores everything.
+
 ## PIN Protection
 
 nos2x-fox includes optional PIN protection to encrypt your private keys. When enabled, your private keys are encrypted using a PIN you choose, and you'll need to enter the PIN each time you use the extension (after the first unlock, the PIN is cached for 10 minutes).

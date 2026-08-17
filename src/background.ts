@@ -159,6 +159,33 @@ browser.runtime.onInstalled.addListener(async () => {
 });
 
 /**
+ * Shows the on/off state of the signer on the toolbar icon, so it is visible without
+ * opening the popup. Badge APIs are unavailable on some platforms (Android Firefox).
+ */
+async function updateToolbarState() {
+  const enabled = await Storage.isSignerEnabled();
+
+  try {
+    await browser.browserAction.setBadgeText({ text: enabled ? '' : 'OFF' });
+    await browser.browserAction.setBadgeBackgroundColor({ color: '#b91c1c' });
+    await browser.browserAction.setTitle({
+      title: enabled ? 'nos2x-fox' : 'nos2x-fox (disabled)'
+    });
+  } catch (error) {
+    console.debug('Could not update the toolbar state.', error);
+  }
+}
+
+// Keep the toolbar in sync with the stored on/off state, whoever changed it
+browser.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === 'local' && ConfigurationKeys.SIGNER_ENABLED in changes) {
+    updateToolbarState();
+  }
+});
+
+updateToolbarState();
+
+/**
  * Handles the closing of a prompt or PIN popup window.
  * Rejects all pending prompts associated with the closed window.
  *
@@ -220,6 +247,11 @@ async function handleContentScriptMessage({
   params,
   host
 }: ContentMessageArgs): Promise<ContentScriptMessageResponse> {
+  if (!(await Storage.isSignerEnabled())) {
+    // the signer is switched off for every site, so don't even prompt
+    return { error: { message: 'nos2x-fox is disabled' } };
+  }
+
   let level = await readPermissionLevel(host);
 
   if (level >= PERMISSIONS_REQUIRED[type]) {

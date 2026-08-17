@@ -466,6 +466,73 @@ input,
     max-height: 50px;
   }
 
+  .signer-switch {
+    display: flex;
+    align-items: center;
+    gap: 0.7em;
+    margin-bottom: 1em;
+    padding: 0.5em 0.7em;
+    border: 1px solid $color-primary;
+    border-radius: $radius-default;
+  }
+
+  .signer-switch-label {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+
+    small {
+      color: $color-text-muted;
+    }
+  }
+
+  .switch {
+    position: relative;
+    display: inline-block;
+    flex: 0 0 auto;
+    width: 2.6em;
+    height: 1.4em;
+
+    input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .switch-slider {
+      position: absolute;
+      inset: 0;
+      cursor: pointer;
+      background-color: $color-primary-disabled;
+      border-radius: 1.4em;
+      transition: background-color 0.2s;
+
+      &::before {
+        content: '';
+        position: absolute;
+        width: 1em;
+        height: 1em;
+        left: 0.2em;
+        bottom: 0.2em;
+        background-color: $color-primary-inv;
+        border-radius: 50%;
+        transition: transform 0.2s;
+      }
+    }
+
+    input:checked + .switch-slider {
+      background-color: $color-success;
+    }
+
+    input:checked + .switch-slider::before {
+      transform: translateX(1.2em);
+    }
+
+    input:focus-visible + .switch-slider {
+      outline: 2px solid $color-info;
+    }
+  }
+
   .public-key {
     margin-bottom: 1em;
     background-color: $color-primary;
