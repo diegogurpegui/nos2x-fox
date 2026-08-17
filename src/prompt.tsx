@@ -6,6 +6,7 @@ import { getPublicKey, nip19 } from 'nostr-tools';
 import {
   convertHexToUint8Array,
   getAllowedCapabilities,
+  MAX_PERMISSION_LEVEL,
   truncatePublicKeys,
   derivePublicKeyFromPrivateKey,
   customAuthorizationDurationSeconds,
@@ -119,7 +120,11 @@ function Prompt() {
     return rangeEntry ? rangeEntry[1] : null;
   }
 
-  function submitAuthorization(condition: AuthorizationCondition, durationSeconds?: number) {
+  function submitAuthorization(
+    condition: AuthorizationCondition,
+    durationSeconds?: number,
+    level: number = openPrompts?.[activePromptIndex]?.level
+  ) {
     if (!openPrompts?.length) {
       return;
     }
@@ -127,7 +132,7 @@ function Prompt() {
       prompt: true,
       id: openPrompts[activePromptIndex].id,
       host: openPrompts[activePromptIndex].host,
-      level: openPrompts[activePromptIndex].level,
+      level,
       condition
     };
     if (durationSeconds != null) {
@@ -143,6 +148,13 @@ function Prompt() {
       setShowCustomDurationSection(false);
       submitAuthorization(condition);
     };
+  }
+
+  function handleAuthorizeEverything(ev: React.MouseEvent) {
+    ev.preventDefault();
+    setCustomDurationError('');
+    setShowCustomDurationSection(false);
+    submitAuthorization(AuthorizationCondition.FOREVER, undefined, MAX_PERMISSION_LEVEL);
   }
 
   function handleShowCustomDurationSection(ev: React.MouseEvent) {
@@ -251,6 +263,15 @@ function Prompt() {
         <button className="button" onClick={authorizeHandler(AuthorizationCondition.FOREVER)}>
           <ShieldCheckmarkIcon /> Authorize forever
         </button>
+        {openPrompts[activePromptIndex].level < MAX_PERMISSION_LEVEL && (
+          <button
+            className="button"
+            onClick={handleAuthorizeEverything}
+            title="Grant every capability to this site, so it does not ask again as it needs more"
+          >
+            <ShieldCheckmarkIcon /> Authorize everything from this site
+          </button>
+        )}
         <div className="button-group">
           <button
             className="button"
