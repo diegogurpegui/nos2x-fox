@@ -29,6 +29,20 @@ async window.nostr.nip44.decrypt(peer, ciphertext): string // takes peer pubkey,
 * By yourself from file: look into [Releases](https://github.com/diegogurpegui/nos2x-fox/releases)
 * From the site [Firefox Add-on](https://addons.mozilla.org/en-US/firefox/addon/nos2x-fox/)
 
+## Authorizations
+
+When a website asks for something the extension does not have a decision for yet, a prompt appears.
+Both answers can be remembered for the same set of durations:
+
+* **Authorize** — forever, for 5 minutes / 1 hour / 8 hours, for a custom duration, or just this once.
+* **Reject** — forever, for 5 minutes / 1 hour / 8 hours, for a custom duration, or just this once.
+
+A remembered rejection refuses further requests from that site without opening a prompt again, until
+it expires. A rejection covers the requested capability and everything above it: rejecting *sign
+events* also refuses encryption requests, but still lets the site ask for your public key.
+
+Remembered decisions are listed per profile in the options page, where they can be revoked.
+
 ## PIN Protection
 
 nos2x-fox includes optional PIN protection to encrypt your private keys. When enabled, your private keys are encrypted using a PIN you choose, and you'll need to enter the PIN each time you use the extension (after the first unlock, the PIN is cached for 10 minutes).

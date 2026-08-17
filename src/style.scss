@@ -648,6 +648,14 @@ input,
     margin: 0.5em;
   }
 
+  /* separates the authorize buttons from the reject buttons */
+  .prompt-action-separator {
+    flex: 1 1 100%;
+    border: 0;
+    border-top: 1px solid $color-primary-disabled;
+    margin: 0.5em;
+  }
+
   .prompt-custom-duration {
     display: flex;
     flex-wrap: wrap;
