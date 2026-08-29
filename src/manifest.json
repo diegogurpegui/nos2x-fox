@@ -5,7 +5,8 @@
   "homepage_url": "https://github.com/diegogurpegui/nos2x-fox",
   "browser_specific_settings": {
     "gecko": {
-      "id": "{fdacee2c-bab4-490d-bc4b-ecdd03d5d68a}"
+      "id": "{fdacee2c-bab4-490d-bc4b-ecdd03d5d68a}",
+      "strict_min_version": "128.0"
     }
   },
   "manifest_version": 2,
@@ -29,9 +30,15 @@
   },
   "content_scripts": [
     {
-      "run_at": "document_end",
+      "run_at": "document_start",
       "matches": ["<all_urls>"],
       "js": ["content-script.js"]
+    },
+    {
+      "run_at": "document_start",
+      "matches": ["<all_urls>"],
+      "js": ["nostr-provider.js"],
+      "world": "MAIN"
     }
   ],
   "protocol_handlers": [
@@ -42,6 +49,5 @@
     }
   ],
   "permissions": ["storage"],
-  "web_accessible_resources": ["nostr-provider.js"],
   "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self';"
 }

@@ -22,6 +22,8 @@ async window.nostr.nip44.encrypt(peer, plaintext): string // takes peer pubkey, 
 async window.nostr.nip44.decrypt(peer, ciphertext): string // takes peer pubkey, ciphertext, returns plaintext as specified in nip-44
 ```
 
+`window.nostr` is injected at `document_start`, before any page script runs, so it is available immediately on load. Requires Firefox 128 or newer.
+
 ## Install
 
 * By yourself from file: look into [Releases](https://github.com/diegogurpegui/nos2x-fox/releases)

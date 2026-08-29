@@ -16,11 +16,11 @@ For functional details (install, PIN setup, API methods), see `README.md`.
 
 ```
 Web page  →  content-script.js  →  background.js  ←  popup / options / prompt / pin (React UIs)
-              injects nostr-provider.js (window.nostr)
+   ↑ window.nostr = nostr-provider.js (MAIN world, document_start)
 ```
 
-- **content-script.js** — Injects `nostr-provider.js` and relays messages between the page and the background.
-- **nostr-provider.ts** — Defines `window.nostr` API; forwards calls to the background via messaging.
+- **content-script.js** — Runs at `document_start`; relays messages between `nostr-provider.js` and the background, and intercepts `nostr:` links.
+- **nostr-provider.ts** — Injected by the manifest as a MAIN-world content script at `document_start`, so `window.nostr` exists before any page script runs. Forwards calls to the background via `postMessage`.
 - **background.ts** — Core logic: key management, signing, encryption, permissions, prompt orchestration.
 - **storage.ts** — Persists keys, relays, and settings via `browser.storage`.
 - **pinEncryption.ts / pinCache.ts** — PIN setup, key encryption/decryption, ephemeral PIN cache.

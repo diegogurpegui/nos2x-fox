@@ -75,14 +75,10 @@ browser.storage.onChanged.addListener((changes, area) => {
 
 //#endregion Nostr link handler
 
-// inject the script that will provide window.nostr
-const script = document.createElement('script');
-script.setAttribute('async', 'false');
-script.setAttribute('type', 'text/javascript');
-script.setAttribute('src', browser.runtime.getURL('nostr-provider.js'));
-document.head.appendChild(script);
+// window.nostr is provided by nostr-provider.js, injected by the manifest as a
+// MAIN-world content script at document_start (before any page script runs).
 
-// listen for messages from that script
+// relay messages from that script to the background
 window.addEventListener('message', async message => {
   if (message.source !== window) return;
   if (!message.data) return;
