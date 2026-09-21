@@ -39,7 +39,39 @@ const pinPromptMap: Record<
   { id: string; windowId?: number; resolve: Function; reject: Function; mode: string }
 > = {};
 
+/** Handlers that must never answer something running in a web page. */
+const EXTENSION_PAGES_ONLY = new Set([
+  'setupPin',
+  'verifyPin',
+  'disablePin',
+  'openPinPrompt',
+  'encryptPrivateKey',
+  'getCachedPin'
+]);
+
+/**
+ * Did this come from one of our own pages, rather than from a content script in a web page?
+ *
+ * NOT `sender.tab`. The options page is opened with tabs.create(), so it has a tab like any web
+ * page does — checking for one blocks the extension from talking to itself, and PIN protection
+ * stops working with nothing on screen to say why. That was tried first and it cost a release.
+ *
+ * `sender.url` is the discriminator that holds. For a content script it is the address of the page
+ * it was injected into, never a moz-extension:// one; content scripts do not run on extension
+ * pages, and a web page cannot reach this listener at all.
+ */
+function fromOwnPage(sender: browser.Runtime.MessageSender): boolean {
+  const base = browser.runtime.getURL('');
+  return typeof sender?.url === 'string' && sender.url.startsWith(base);
+}
+
 browser.runtime.onMessage.addListener(async (message, sender) => {
+  // The content script's allow-list is not the only thing that should be refusing these — this is
+  // the half that survives somebody adding a second bridge later and forgetting.
+  if (!fromOwnPage(sender) && EXTENSION_PAGES_ONLY.has(message?.type)) {
+    return { success: false, error: 'not available to pages' };
+  }
+
   // Check if it's a PIN message
   if (
     message.type === 'setupPin' ||
