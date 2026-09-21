@@ -1,4 +1,4 @@
-import { Event, VerifiedEvent } from 'nostr-tools';
+import type { Event, VerifiedEvent } from 'nostr-tools';
 
 export const KindNames = {
   '0': 'Metadata',
