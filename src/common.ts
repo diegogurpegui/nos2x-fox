@@ -1,7 +1,12 @@
 import browser from 'webextension-polyfill';
 import { getPublicKey, nip19 } from 'nostr-tools';
 
-import { AuthorizationCondition, ProfilesConfig } from './types';
+import {
+  AuthorizationCondition,
+  PermissionConfig,
+  PermissionDecision,
+  ProfilesConfig
+} from './types';
 
 export const PERMISSIONS_REQUIRED = {
   getPublicKey: 1,
@@ -158,6 +163,32 @@ export function shouldRemoveStoredPermission(
     return false;
   }
   return createdAtSeconds < nowSeconds - fixedTtl;
+}
+
+/**
+ * Applies a stored permission to an incoming request.
+ *
+ * An `allow` entry covers every request up to its level, a `deny` entry refuses every
+ * request from its level upward. Anything the entry does not cover is asked again.
+ *
+ * @param entry - Stored permission for the host, if any
+ * @param requiredLevel - Level the requested method needs
+ */
+export function resolveStoredPermission(
+  entry: PermissionConfig[string] | undefined,
+  requiredLevel: number
+): 'allow' | 'deny' | 'ask' {
+  if (!entry) return 'ask';
+
+  if ((entry.decision ?? PermissionDecision.ALLOW) === PermissionDecision.DENY) {
+    return entry.level <= requiredLevel ? 'deny' : 'ask';
+  }
+  return entry.level >= requiredLevel ? 'allow' : 'ask';
+}
+
+/** Human-readable label for the options permissions table. */
+export function formatPermissionDecisionLabel(decision?: PermissionDecision): string {
+  return decision === PermissionDecision.DENY ? 'deny' : 'allow';
 }
 
 /** Human-readable label for the options permissions table. */

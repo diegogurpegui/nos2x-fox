@@ -6,6 +6,7 @@ import {
   ConfigurationKeys,
   OpenPromptItem,
   PermissionConfig,
+  PermissionDecision,
   ProfileConfig,
   ProfilesConfig,
   RelaysConfig
@@ -384,16 +385,18 @@ export async function readActivePermissions(): Promise<PermissionConfig> {
   return permissions;
 }
 /**
- * Grants or updates a site permission on the active profile.
+ * Remembers a site decision on the active profile, replacing any previous one for that host.
  * @param host - Origin host the permission applies to
  * @param condition - Authorization condition (e.g. always, expirable)
  * @param level - Permission level determining allowed capabilities
+ * @param decision - Whether the conditions grant or refuse access
  * @param durationSeconds - TTL in seconds for custom expirable grants
  */
 export async function addActivePermission(
   host: string,
   condition: string,
   level: number,
+  decision: PermissionDecision = PermissionDecision.ALLOW,
   durationSeconds?: number
 ): Promise<ProfilesConfig> {
   let storedPermissions = await readActivePermissions();
@@ -401,7 +404,8 @@ export async function addActivePermission(
   const entry: PermissionConfig[string] = {
     condition,
     level,
-    created_at: Math.round(Date.now() / 1000)
+    created_at: Math.round(Date.now() / 1000),
+    decision
   };
   if (condition === AuthorizationCondition.EXPIRABLE_CUSTOM && durationSeconds != null) {
     entry.duration_seconds = durationSeconds;
