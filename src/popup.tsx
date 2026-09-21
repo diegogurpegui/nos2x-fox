@@ -16,6 +16,11 @@ function Popup() {
   let [publiKeyNIP19, setPublicKeyNIP19] = useState<string>();
   let [selectedKeyType, setSelectedKeyType] = useState('npub');
   let [profiles, setProfiles] = useState<ProfilesConfig>({});
+  let [signerEnabled, setSignerEnabled] = useState<boolean>(true);
+
+  useEffect(() => {
+    Storage.isSignerEnabled().then(setSignerEnabled);
+  }, []);
 
   useEffect(() => {
     async function loadActiveProfile() {
@@ -65,6 +70,12 @@ function Popup() {
     setSelectedKeyType(event.target.value);
   }
 
+  async function handleSignerEnabledChange(event) {
+    const enabled = event.target.checked;
+    setSignerEnabled(enabled);
+    await Storage.setSignerEnabled(enabled);
+  }
+
   function goToOptionsPage() {
     browser.tabs
       .create({
@@ -112,6 +123,20 @@ function Popup() {
       <h1>
         <img src={logotype} alt="nos2x-fox" />
       </h1>
+      <div className="signer-switch">
+        <label className="switch">
+          <input type="checkbox" checked={signerEnabled} onChange={handleSignerEnabledChange} />
+          <span className="switch-slider" />
+        </label>
+        <span className="signer-switch-label">
+          {signerEnabled ? 'Enabled' : 'Disabled'}
+          <small>
+            {signerEnabled
+              ? 'Websites can request signatures.'
+              : 'All website requests are refused.'}
+          </small>
+        </span>
+      </div>
       {!publicKeyHexa ? (
         <p>
           You don't have a private key set. Use the{' '}
