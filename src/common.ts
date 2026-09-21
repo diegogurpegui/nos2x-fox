@@ -13,6 +13,13 @@ export const PERMISSIONS_REQUIRED = {
   'nip44.decrypt': 20
 };
 
+export type PageCallableType = keyof typeof PERMISSIONS_REQUIRED;
+
+/** Whether `type` is a NIP-07 method a web page may request. */
+export function isCallableFromPage(type: string): type is PageCallableType {
+  return Object.prototype.hasOwnProperty.call(PERMISSIONS_REQUIRED, type);
+}
+
 const ORDERED_PERMISSIONS: [number, (keyof typeof PERMISSIONS_REQUIRED)[]][] = [
   [1, ['getPublicKey']],
   [5, ['getRelays']],

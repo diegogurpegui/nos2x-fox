@@ -1,28 +1,10 @@
 import browser from 'webextension-polyfill';
 
-import { buildNostrLinkUrl } from './common';
+import { buildNostrLinkUrl, isCallableFromPage } from './common';
 import * as Storage from './storage';
 import { ConfigurationKeys } from './types';
 
 const EXTENSION_CODE = 'nos2x-fox';
-
-// The only message types a web page may ask for. Everything else the background can do — the PIN
-// handlers, key encryption, opening a prompt window — belongs to the extension's own pages.
-//
-// An allow-list rather than a block-list on purpose. Before it, the page chose `type` freely and
-// the background answered `getCachedPin` above every permission check, handing any site the PIN
-// that decrypts the private key. The other privileged handlers were unreachable only by accident:
-// they read fields this bridge does not copy across. The next handler written without arguments
-// would have been exposed the day it was added, and nobody would have noticed.
-const CALLABLE_FROM_PAGE = new Set([
-  'getPublicKey',
-  'getRelays',
-  'signEvent',
-  'nip04.encrypt',
-  'nip04.decrypt',
-  'nip44.encrypt',
-  'nip44.decrypt'
-]);
 
 //#region Nostr link handler
 let linkHandlerTemplate = '';
@@ -107,9 +89,7 @@ window.addEventListener('message', async message => {
   if (!message.data.params) return;
   if (message.data.ext !== EXTENSION_CODE) return;
 
-  // Answer rather than ignore: a caller that gets nothing back waits on a promise forever, and an
-  // honest one deserves to be told it asked for something that is not on offer.
-  if (!CALLABLE_FROM_PAGE.has(message.data.type)) {
+  if (!isCallableFromPage(message.data.type)) {
     window.postMessage(
       {
         id: message.data.id,
