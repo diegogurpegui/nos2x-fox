@@ -52,6 +52,8 @@ export type PermissionConfig = {
     level: number;
     /** Present when `condition` is `expirable_custom`; TTL in seconds from `created_at`. */
     duration_seconds?: number;
+    /** Whether the host was allowed or denied. Absent means `allow` (entries stored before denials existed). */
+    decision?: PermissionDecision;
   };
 };
 
@@ -78,6 +80,15 @@ export enum AuthorizationCondition {
   SINGLE = 'single'
 }
 
+/**
+ * Whether a remembered decision grants or refuses the request.
+ * A stored `deny` refuses every request at or above its level without opening a prompt.
+ */
+export enum PermissionDecision {
+  ALLOW = 'allow',
+  DENY = 'deny'
+}
+
 export type PromptResponse = {
   /** ID assigned to the prompt */
   id: string;
@@ -88,6 +99,8 @@ export type PromptResponse = {
   level?: number;
   /** Required when `condition` is `expirable_custom`: grant length in whole seconds. */
   durationSeconds?: number;
+  /** Whether the remembered conditions grant or refuse access. Absent means `allow`. */
+  decision?: PermissionDecision;
 };
 
 export type PromptParams = {

@@ -9,6 +9,7 @@ import {
   ContentMessageArgs,
   ContentScriptMessageResponse,
   OpenPromptItem,
+  PermissionDecision,
   PinMessage,
   PinMessageResponse,
   PromptParams,
@@ -19,7 +20,8 @@ import {
   convertHexToUint8Array,
   openPopupWindow,
   derivePublicKeyFromPrivateKey,
-  normalizeCustomAuthorizationDurationSeconds
+  normalizeCustomAuthorizationDurationSeconds,
+  resolveStoredPermission
 } from './common';
 import { LRUCache } from './LRUCache';
 import PromptManager from './PromptManager';
@@ -220,26 +222,31 @@ async function handleContentScriptMessage({
   params,
   host
 }: ContentMessageArgs): Promise<ContentScriptMessageResponse> {
-  let level = await readPermissionLevel(host);
+  const requiredLevel = PERMISSIONS_REQUIRED[type];
+  const insufficientPermissions = {
+    error: { message: `Insufficient permissions, required ${requiredLevel}` }
+  };
+  const storedPermission = (await Storage.readActivePermissions())[host];
 
-  if (level >= PERMISSIONS_REQUIRED[type]) {
-    // authorized, proceed
-  } else {
-    // ask for authorization
-    try {
-      const isAllowed = await promptPermission(host, PERMISSIONS_REQUIRED[type], params);
-      if (!isAllowed) {
-        // not authorized, stop here
-        return {
-          error: {
-            message: `Insufficient permissions, required ${PERMISSIONS_REQUIRED[type]}`
-          }
-        };
+  switch (resolveStoredPermission(storedPermission, requiredLevel)) {
+    case 'allow':
+      // authorized, proceed
+      break;
+    case 'deny':
+      // refused earlier for this long, stop here without prompting
+      return insufficientPermissions;
+    case 'ask':
+      try {
+        const isAllowed = await promptPermission(host, requiredLevel, params);
+        if (!isAllowed) {
+          // not authorized, stop here
+          return insufficientPermissions;
+        }
+      } catch (error) {
+        console.error('Error asking for permission.', error);
+        return { error: { message: error.message, stack: error.stack } };
       }
-    } catch (error) {
-      console.error('Error asking for permission.', error);
-      return { error: { message: error.message, stack: error.stack } };
-    }
+      break;
   }
 
   // Get decrypted private key (handles PIN protection automatically)
@@ -315,7 +322,14 @@ async function handleContentScriptMessage({
 }
 
 async function handlePromptMessage(
-  { id, condition, host, level, durationSeconds }: PromptResponse,
+  {
+    id,
+    condition,
+    host,
+    level,
+    durationSeconds,
+    decision = PermissionDecision.ALLOW
+  }: PromptResponse,
   sender
 ): Promise<void> {
   const openPrompt = openPromptMap[id];
@@ -326,6 +340,9 @@ async function handlePromptMessage(
     return;
   }
 
+  // a remembered denial resolves the pending call negatively, just like a plain rejection
+  const isAllowed = decision === PermissionDecision.ALLOW;
+
   try {
     switch (condition) {
       case AuthorizationCondition.FOREVER:
@@ -333,8 +350,8 @@ async function handlePromptMessage(
       case AuthorizationCondition.EXPIRABLE_1H:
       case AuthorizationCondition.EXPIRABLE_8H:
         if (level) {
-          openPrompt.resolve?.(true);
-          Storage.addActivePermission(host ?? '', condition, level);
+          openPrompt.resolve?.(isAllowed);
+          Storage.addActivePermission(host ?? '', condition, level, decision);
         } else {
           console.warn('No authorization level provided');
         }
@@ -342,8 +359,8 @@ async function handlePromptMessage(
       case AuthorizationCondition.EXPIRABLE_CUSTOM: {
         const normalizedSeconds = normalizeCustomAuthorizationDurationSeconds(durationSeconds);
         if (level && normalizedSeconds != null) {
-          openPrompt.resolve?.(true);
-          Storage.addActivePermission(host ?? '', condition, level, normalizedSeconds);
+          openPrompt.resolve?.(isAllowed);
+          Storage.addActivePermission(host ?? '', condition, level, decision, normalizedSeconds);
         } else {
           console.warn('Invalid custom authorization duration or missing level');
           openPrompt.resolve?.(false);
@@ -351,7 +368,7 @@ async function handlePromptMessage(
         break;
       }
       case AuthorizationCondition.SINGLE:
-        openPrompt.resolve?.(true);
+        openPrompt.resolve?.(isAllowed);
         break;
       case AuthorizationCondition.REJECT:
         openPrompt.resolve?.(false);
@@ -414,7 +431,7 @@ function promptPermission(host: string, level: number, params: PromptParams): Pr
           url: promptPageURL,
           type: 'popup',
           width: 600,
-          height: 400
+          height: 520
         });
       } else {
         // Android Firefox
@@ -433,10 +450,6 @@ function promptPermission(host: string, level: number, params: PromptParams): Pr
       PromptManager.add({ id, windowId: win.id, host, level, params });
     });
   });
-}
-
-async function readPermissionLevel(host: string): Promise<number> {
-  return (await Storage.readActivePermissions())[host]?.level || 0;
 }
 
 /**

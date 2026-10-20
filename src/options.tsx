@@ -7,7 +7,13 @@ import { format, formatDistance } from 'date-fns';
 
 import { Alert, Modal } from './components';
 
-import { PermissionConfig, ProfileConfig, ProfilesConfig, RelaysConfig } from './types';
+import {
+  PermissionConfig,
+  PermissionDecision,
+  ProfileConfig,
+  ProfilesConfig,
+  RelaysConfig
+} from './types';
 import * as Storage from './storage';
 import {
   convertHexToUint8Array,
@@ -23,7 +29,8 @@ import {
   findExistingProfileByPrivateKey,
   formatPrivateKeyForDisplay,
   validatePrivateKeyFormat,
-  formatPermissionConditionLabel
+  formatPermissionConditionLabel,
+  formatPermissionDecisionLabel
 } from './common';
 import logotype from './assets/logo/logotype.png';
 import AddCircleIcon from './assets/icons/add-circle-outline.svg';
@@ -66,6 +73,7 @@ function Options() {
       condition: string;
       created_at: number;
       duration_seconds?: number;
+      decision?: PermissionDecision;
     }[]
   >();
   let [message, setMessage] = useState('');
@@ -537,23 +545,35 @@ function Options() {
     console.debug('Converting permissions to UI', permissions);
     if (!permissions) return undefined;
 
-    return Object.entries(permissions).map(
-      ([host, { level, condition, created_at, duration_seconds }]) => ({
+    return Object.entries(permissions)
+      .map(([host, { level, condition, created_at, duration_seconds, decision }]) => ({
         host,
         level,
         condition,
         created_at,
-        duration_seconds
-      })
-    );
+        duration_seconds,
+        decision
+      }))
+      .sort((a, b) => {
+        // rejections first: a site that is being refused never prompts again, so this
+        // page is the only place the decision can be undone
+        const aDenied = a.decision === PermissionDecision.DENY ? 0 : 1;
+        const bDenied = b.decision === PermissionDecision.DENY ? 0 : 1;
+        return aDenied - bDenied || b.created_at - a.created_at;
+      });
   }
 
   async function handleRevoke(e) {
     e.preventDefault();
-    let host = e.target.dataset.domain;
-    if (window.confirm(`Revoke all permissions from ${host}?`)) {
+    const { domain: host, decision } = e.target.dataset;
+    const isDenied = decision === PermissionDecision.DENY;
+    const question = isDenied
+      ? `Let ${host} ask for permission again?`
+      : `Revoke all permissions from ${host}?`;
+
+    if (window.confirm(question)) {
       await Storage.removePermissions(selectedProfilePubKey, host);
-      showMessage(`Removed permissions from ${host}`);
+      showMessage(isDenied ? `${host} can ask again` : `Removed permissions from ${host}`);
       reloadSelectedProfile();
     }
   }
@@ -782,12 +802,17 @@ function Options() {
 
         <section>
           <h3>Permissions</h3>
+          <p className="text-help">
+            Decisions you asked this extension to remember. A rejected site is refused without
+            showing a prompt, so this is the only place to let it ask again.
+          </p>
           {permissions && permissions.length > 0 ? (
             <>
               <table>
                 <thead>
                   <tr>
                     <th>Domain</th>
+                    <th>Decision</th>
                     <th>Permissions</th>
                     <th>Condition</th>
                     <th>Since</th>
@@ -795,24 +820,31 @@ function Options() {
                   </tr>
                 </thead>
                 <tbody>
-                  {permissions.map(({ host, level, condition, created_at, duration_seconds }) => (
-                    <tr key={host}>
-                      <td>{host}</td>
-                      <td>{getPermissionsString(level)}</td>
-                      <td>{formatPermissionConditionLabel(condition, duration_seconds)}</td>
-                      <td
-                        className="help-cursor"
-                        title={formatDistance(new Date(created_at * 1000), new Date())}
-                      >
-                        {format(new Date(created_at * 1000), 'yyyy-MM-dd HH:mm:ss')}
-                      </td>
-                      <td>
-                        <button onClick={handleRevoke} data-domain={host}>
-                          revoke
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {permissions.map(
+                    ({ host, level, condition, created_at, duration_seconds, decision }) => (
+                      <tr key={host}>
+                        <td>{host}</td>
+                        <td>{formatPermissionDecisionLabel(decision)}</td>
+                        <td>{getPermissionsString(level)}</td>
+                        <td>{formatPermissionConditionLabel(condition, duration_seconds)}</td>
+                        <td
+                          className="help-cursor"
+                          title={formatDistance(new Date(created_at * 1000), new Date())}
+                        >
+                          {format(new Date(created_at * 1000), 'yyyy-MM-dd HH:mm:ss')}
+                        </td>
+                        <td>
+                          <button
+                            onClick={handleRevoke}
+                            data-domain={host}
+                            data-decision={decision}
+                          >
+                            {decision === PermissionDecision.DENY ? 'unblock' : 'revoke'}
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  )}
                 </tbody>
               </table>
             </>
@@ -873,13 +905,10 @@ function Options() {
           <h3>Nostr links</h3>
           <p className="text-help">
             When set, clicking <code>nostr:</code> links opens the URL below. Use <code>%s</code>{' '}
-            for the part after <code>nostr:</code> (for example,{' '}
-            <code>https://iris.to/%s</code> or <code>http://localhost:3000/%s</code>). Leave blank
-            to disable.
+            for the part after <code>nostr:</code> (for example, <code>https://iris.to/%s</code> or{' '}
+            <code>http://localhost:3000/%s</code>). Leave blank to disable.
           </p>
-          <div
-            className={`form-field ${!isNostrLinkHandlerUrlValid ? 'validation-error' : ''}`}
-          >
+          <div className={`form-field ${!isNostrLinkHandlerUrlValid ? 'validation-error' : ''}`}>
             <label htmlFor="nostr-link-handler-url">Handler URL template:</label>
             <input
               id="nostr-link-handler-url"

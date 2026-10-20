@@ -11,7 +11,13 @@ import {
   customAuthorizationDurationSeconds,
   type AuthorizationTimeUnit
 } from './common';
-import { AuthorizationCondition, KindNames, ProfileConfig, PromptResponse } from './types';
+import {
+  AuthorizationCondition,
+  KindNames,
+  PermissionDecision,
+  ProfileConfig,
+  PromptResponse
+} from './types';
 import * as Storage from './storage';
 
 import ShieldCheckmarkIcon from './assets/icons/shield-checkmark-outline.svg';
@@ -39,7 +45,10 @@ function Prompt() {
   const [customDurationAmount, setCustomDurationAmount] = useState<string>('1');
   const [customDurationUnit, setCustomDurationUnit] = useState<AuthorizationTimeUnit>('minutes');
   const [customDurationError, setCustomDurationError] = useState<string>('');
-  const [showCustomDurationSection, setShowCustomDurationSection] = useState(false);
+  /** Which button opened the custom duration section, or null while it is closed. */
+  const [customDurationDecision, setCustomDurationDecision] = useState<PermissionDecision | null>(
+    null
+  );
 
   useEffect(() => {
     Storage.getActiveProfile().then(profile => {
@@ -70,7 +79,7 @@ function Prompt() {
 
   useEffect(() => {
     setCustomDurationError('');
-    setShowCustomDurationSection(false);
+    setCustomDurationDecision(null);
   }, [activePromptIndex]);
 
   useEffect(() => {
@@ -119,7 +128,11 @@ function Prompt() {
     return rangeEntry ? rangeEntry[1] : null;
   }
 
-  function submitAuthorization(condition: AuthorizationCondition, durationSeconds?: number) {
+  function submitDecision(
+    decision: PermissionDecision,
+    condition: AuthorizationCondition,
+    durationSeconds?: number
+  ) {
     if (!openPrompts?.length) {
       return;
     }
@@ -128,7 +141,8 @@ function Prompt() {
       id: openPrompts[activePromptIndex].id,
       host: openPrompts[activePromptIndex].host,
       level: openPrompts[activePromptIndex].level,
-      condition
+      condition,
+      decision
     };
     if (durationSeconds != null) {
       promptResponse.durationSeconds = durationSeconds;
@@ -136,24 +150,26 @@ function Prompt() {
     browser.runtime.sendMessage(promptResponse);
   }
 
-  function authorizeHandler(condition: AuthorizationCondition) {
+  function decisionHandler(decision: PermissionDecision, condition: AuthorizationCondition) {
     return function (ev: React.MouseEvent) {
       ev.preventDefault();
       setCustomDurationError('');
-      setShowCustomDurationSection(false);
-      submitAuthorization(condition);
+      setCustomDurationDecision(null);
+      submitDecision(decision, condition);
     };
   }
 
-  function handleShowCustomDurationSection(ev: React.MouseEvent) {
-    ev.preventDefault();
-    setCustomDurationError('');
-    setShowCustomDurationSection(true);
+  function showCustomDurationHandler(decision: PermissionDecision) {
+    return function (ev: React.MouseEvent) {
+      ev.preventDefault();
+      setCustomDurationError('');
+      setCustomDurationDecision(decision);
+    };
   }
 
-  function handleCustomDurationAuthorize(ev: React.MouseEvent) {
+  function handleCustomDurationApply(ev: React.MouseEvent) {
     ev.preventDefault();
-    if (!openPrompts?.length) {
+    if (!openPrompts?.length || customDurationDecision == null) {
       return;
     }
     const parsedAmount = parseInt(String(customDurationAmount).trim(), 10);
@@ -165,7 +181,64 @@ function Prompt() {
       return;
     }
     setCustomDurationError('');
-    submitAuthorization(AuthorizationCondition.EXPIRABLE_CUSTOM, durationSeconds);
+    submitDecision(
+      customDurationDecision,
+      AuthorizationCondition.EXPIRABLE_CUSTOM,
+      durationSeconds
+    );
+  }
+
+  /** The custom duration form, shown under whichever button row opened it. */
+  function renderCustomDurationSection(decision: PermissionDecision) {
+    if (customDurationDecision !== decision) return null;
+
+    const isDeny = decision === PermissionDecision.DENY;
+    return (
+      <>
+        <div className="prompt-custom-duration">
+          <label className="prompt-custom-duration-label" htmlFor="custom-duration-amount">
+            {isDeny ? 'Reject for' : 'Authorize for'}
+          </label>
+          <input
+            id="custom-duration-amount"
+            type="number"
+            min={1}
+            inputMode="numeric"
+            className="prompt-custom-duration-input"
+            value={customDurationAmount}
+            onChange={e => {
+              setCustomDurationAmount(e.target.value);
+              setCustomDurationError('');
+            }}
+          />
+          <select
+            className="prompt-custom-duration-unit"
+            value={customDurationUnit}
+            onChange={e => {
+              setCustomDurationUnit(e.target.value as AuthorizationTimeUnit);
+              setCustomDurationError('');
+            }}
+          >
+            <option value="minutes">minutes</option>
+            <option value="hours">hours</option>
+            <option value="days">days</option>
+          </select>
+          <button
+            type="button"
+            className={`button${isDeny ? ' button-danger' : ''}`}
+            onClick={handleCustomDurationApply}
+          >
+            <TimerIcon />
+            Apply
+          </button>
+        </div>
+        {customDurationError ? (
+          <p className="prompt-custom-duration-error" role="alert">
+            {customDurationError}
+          </p>
+        ) : null}
+      </>
+    );
   }
 
   function movePrompt(direction: number) {
@@ -248,87 +321,91 @@ function Prompt() {
         </ul>
       </div>
       <div className="prompt-action-buttons">
-        <button className="button" onClick={authorizeHandler(AuthorizationCondition.FOREVER)}>
+        <button
+          className="button"
+          onClick={decisionHandler(PermissionDecision.ALLOW, AuthorizationCondition.FOREVER)}
+        >
           <ShieldCheckmarkIcon /> Authorize forever
         </button>
         <div className="button-group">
           <button
             className="button"
-            onClick={authorizeHandler(AuthorizationCondition.EXPIRABLE_5M)}
+            onClick={decisionHandler(PermissionDecision.ALLOW, AuthorizationCondition.EXPIRABLE_5M)}
           >
             <TimerIcon />
             Authorize for 5 m
           </button>
           <button
             className="button"
-            onClick={authorizeHandler(AuthorizationCondition.EXPIRABLE_1H)}
+            onClick={decisionHandler(PermissionDecision.ALLOW, AuthorizationCondition.EXPIRABLE_1H)}
           >
             1 h
           </button>
           <button
             className="button"
-            onClick={authorizeHandler(AuthorizationCondition.EXPIRABLE_8H)}
+            onClick={decisionHandler(PermissionDecision.ALLOW, AuthorizationCondition.EXPIRABLE_8H)}
           >
             8 h
           </button>
-          <button type="button" className="button" onClick={handleShowCustomDurationSection}>
+          <button
+            type="button"
+            className="button"
+            onClick={showCustomDurationHandler(PermissionDecision.ALLOW)}
+          >
             Custom
           </button>
         </div>
-        {showCustomDurationSection ? (
-          <>
-            <div className="prompt-custom-duration">
-              <label className="prompt-custom-duration-label" htmlFor="custom-duration-amount">
-                Authorize for
-              </label>
-              <input
-                id="custom-duration-amount"
-                type="number"
-                min={1}
-                inputMode="numeric"
-                className="prompt-custom-duration-input"
-                value={customDurationAmount}
-                onChange={e => {
-                  setCustomDurationAmount(e.target.value);
-                  setCustomDurationError('');
-                }}
-              />
-              <select
-                className="prompt-custom-duration-unit"
-                value={customDurationUnit}
-                onChange={e => {
-                  setCustomDurationUnit(e.target.value as AuthorizationTimeUnit);
-                  setCustomDurationError('');
-                }}
-              >
-                <option value="minutes">minutes</option>
-                <option value="hours">hours</option>
-                <option value="days">days</option>
-              </select>
-              <button type="button" className="button" onClick={handleCustomDurationAuthorize}>
-                <TimerIcon />
-                Apply
-              </button>
-            </div>
-            {customDurationError ? (
-              <p className="prompt-custom-duration-error" role="alert">
-                {customDurationError}
-              </p>
-            ) : null}
-          </>
-        ) : null}
+        {renderCustomDurationSection(PermissionDecision.ALLOW)}
         <button
           className="button button-success"
-          onClick={authorizeHandler(AuthorizationCondition.SINGLE)}
+          onClick={decisionHandler(PermissionDecision.ALLOW, AuthorizationCondition.SINGLE)}
         >
           <CheckmarkCircleIcon />
           Authorize just this
         </button>
+
+        <hr className="prompt-action-separator" />
+
         <button
           className="button button-danger"
-          onClick={authorizeHandler(AuthorizationCondition.REJECT)}
+          onClick={decisionHandler(PermissionDecision.DENY, AuthorizationCondition.FOREVER)}
         >
-          <CloseCircleIcon /> Reject
+          <CloseCircleIcon /> Reject forever
+        </button>
+        <div className="button-group">
+          <button
+            className="button button-danger"
+            onClick={decisionHandler(PermissionDecision.DENY, AuthorizationCondition.EXPIRABLE_5M)}
+          >
+            <TimerIcon />
+            Reject for 5 m
+          </button>
+          <button
+            className="button button-danger"
+            onClick={decisionHandler(PermissionDecision.DENY, AuthorizationCondition.EXPIRABLE_1H)}
+          >
+            1 h
+          </button>
+          <button
+            className="button button-danger"
+            onClick={decisionHandler(PermissionDecision.DENY, AuthorizationCondition.EXPIRABLE_8H)}
+          >
+            8 h
+          </button>
+          <button
+            type="button"
+            className="button button-danger"
+            onClick={showCustomDurationHandler(PermissionDecision.DENY)}
+          >
+            Custom
+          </button>
+        </div>
+        {renderCustomDurationSection(PermissionDecision.DENY)}
+        <button
+          className="button button-danger"
+          onClick={decisionHandler(PermissionDecision.DENY, AuthorizationCondition.REJECT)}
+        >
+          <CloseCircleIcon /> Reject just this
         </button>
       </div>
       {openPrompts[activePromptIndex].params && (
