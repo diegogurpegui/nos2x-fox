@@ -114,6 +114,23 @@ export async function setNostrLinkHandlerUrlTemplate(template: string): Promise<
 }
 
 /**
+ * Whether the signer answers websites at all. Defaults to enabled.
+ */
+export async function isSignerEnabled(): Promise<boolean> {
+  const data = await browser.storage.local.get(ConfigurationKeys.SIGNER_ENABLED);
+  return (data[ConfigurationKeys.SIGNER_ENABLED] as boolean) ?? true;
+}
+
+/**
+ * Turns the signer on or off for every website at once. Stored keys and permissions are left untouched.
+ */
+export async function setSignerEnabled(enabled: boolean): Promise<void> {
+  await browser.storage.local.set({
+    [ConfigurationKeys.SIGNER_ENABLED]: enabled
+  });
+}
+
+/**
  * Gets the encrypted private key from storage
  */
 export async function getEncryptedPrivateKey(): Promise<string | null> {
