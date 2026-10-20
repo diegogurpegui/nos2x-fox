@@ -20,6 +20,9 @@ export function isCallableFromPage(type: string): type is PageCallableType {
   return Object.prototype.hasOwnProperty.call(PERMISSIONS_REQUIRED, type);
 }
 
+/** The highest level any method asks for; granting it covers every capability. */
+export const MAX_PERMISSION_LEVEL = Math.max(...Object.values(PERMISSIONS_REQUIRED));
+
 const ORDERED_PERMISSIONS: [number, (keyof typeof PERMISSIONS_REQUIRED)[]][] = [
   [1, ['getPublicKey']],
   [5, ['getRelays']],

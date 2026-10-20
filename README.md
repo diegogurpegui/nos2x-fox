@@ -29,6 +29,17 @@ async window.nostr.nip44.decrypt(peer, ciphertext): string // takes peer pubkey,
 * By yourself from file: look into [Releases](https://github.com/diegogurpegui/nos2x-fox/releases)
 * From the site [Firefox Add-on](https://addons.mozilla.org/en-US/firefox/addon/nos2x-fox/)
 
+## Authorizing a site once instead of three times
+
+Permission levels widen downward: a grant for signing also covers reading the public key, but not
+the other way around. A site that first asks for your public key, then to sign, then to encrypt
+therefore opens three prompts.
+
+When the request does not already cover everything, the prompt offers **Authorize everything from
+this site**, which grants every capability to that host at once. Use it for clients you trust and
+use daily; use the narrower buttons for everything else. It can be revoked per site in the options
+page like any other grant.
+
 ## PIN Protection
 
 nos2x-fox includes optional PIN protection to encrypt your private keys. When enabled, your private keys are encrypted using a PIN you choose, and you'll need to enter the PIN each time you use the extension (after the first unlock, the PIN is cached for 10 minutes).
