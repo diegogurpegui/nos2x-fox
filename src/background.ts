@@ -30,7 +30,14 @@ import { clearUint8Array, clearStringReference } from './memoryUtils';
 /** Map to keep track of open prompts so we can properly capture the responses and close them */
 const openPromptMap: Record<
   string,
-  { id: string; windowId?: number; resolve: Function; reject: Function }
+  {
+    id: string;
+    windowId?: number;
+    host: string;
+    level: number;
+    resolve: Function;
+    reject: Function;
+  }
 > = {};
 
 /** Map to keep track of PIN prompts */
@@ -38,6 +45,12 @@ const pinPromptMap: Record<
   string,
   { id: string; windowId?: number; resolve: Function; reject: Function; mode: string }
 > = {};
+
+/** Brute-force rate-limiting for PIN verification attempts */
+const MAX_FREE_PIN_ATTEMPTS = 5;
+const MAX_PIN_LOCKOUT_MS = 5 * 60 * 1000;
+let failedPinAttempts = 0;
+let pinLockoutUntil = 0;
 
 /** Handlers that must never answer something running in a web page. */
 const EXTENSION_PAGES_ONLY = new Set([
@@ -65,10 +78,31 @@ function fromOwnPage(sender: browser.Runtime.MessageSender): boolean {
   return typeof sender?.url === 'string' && sender.url.startsWith(base);
 }
 
+/**
+ * Derives the authoritative origin host from the browser-populated `sender.url`,
+ * falling back to `fallbackHost` only if `sender.url` cannot be parsed.
+ */
+function resolveSenderHost(sender: browser.Runtime.MessageSender, fallbackHost: string): string {
+  if (typeof sender?.url === 'string' && sender.url) {
+    try {
+      const parsed = new URL(sender.url);
+      if (parsed.host) {
+        return parsed.host;
+      }
+    } catch {
+      // fall through to fallbackHost
+    }
+  }
+  return fallbackHost;
+}
+
 browser.runtime.onMessage.addListener(async (message, sender) => {
   // The content script's allow-list is not the only thing that should be refusing these — this is
   // the half that survives somebody adding a second bridge later and forgetting.
-  if (!fromOwnPage(sender) && EXTENSION_PAGES_ONLY.has(message?.type)) {
+  if (
+    !fromOwnPage(sender) &&
+    (EXTENSION_PAGES_ONLY.has(message?.type) || Boolean((message as PromptResponse)?.prompt))
+  ) {
     return { success: false, error: 'not available to pages' };
   }
 
@@ -124,24 +158,46 @@ browser.runtime.onMessage.addListener(async (message, sender) => {
     }
   }
 
-  // Check if it's a request to get cached PIN status
+  // Check if it's a request to get cached PIN status (never return the raw PIN over messaging)
   if (message.type === 'getCachedPin') {
-    const pin = await getCachedPin();
-    return { success: true, pin };
+    let pin = await getCachedPin();
+    const cached = Boolean(pin);
+    pin = clearStringReference(pin) as any;
+    return { success: true, cached };
   }
 
   let { prompt } = message as PromptResponse;
 
   if (prompt) {
-    handlePromptMessage(message as PromptResponse, sender);
+    return handlePromptMessage(message as PromptResponse, sender);
   } else {
-    return handleContentScriptMessage(message as ContentMessageArgs);
+    const contentMsg = message as ContentMessageArgs;
+    const verifiedHost = resolveSenderHost(sender, contentMsg.host);
+    return handleContentScriptMessage({
+      type: contentMsg.type,
+      params: contentMsg.params,
+      host: verifiedHost
+    });
   }
 });
 
 browser.runtime.onMessageExternal.addListener(async (message, sender) => {
-  const { type, params } = message as ContentMessageArgs;
-  let extensionId = new URL(sender.url ?? '').host;
+  if (!sender?.url) {
+    return { error: { message: 'Unauthorized external sender' } };
+  }
+  let extensionId: string;
+  try {
+    extensionId = new URL(sender.url).host;
+  } catch {
+    return { error: { message: 'Invalid external sender URL' } };
+  }
+  if (!extensionId) {
+    return { error: { message: 'Missing external sender host' } };
+  }
+  const { type, params } = (message ?? {}) as ContentMessageArgs;
+  if (!Object.prototype.hasOwnProperty.call(PERMISSIONS_REQUIRED, type)) {
+    return { error: { message: `Unsupported external request type "${type}"` } };
+  }
   return handleContentScriptMessage({ type, params, host: extensionId });
 });
 
@@ -294,16 +350,16 @@ async function handleContentScriptMessage({
       }
       case 'nip44.encrypt': {
         const { peer, plaintext } = params;
-        const key = getSharedSecret(sk, peer);
+        const key = getSharedSecret(sk, activePubKey, peer);
         return nip44.v2.encrypt(plaintext as string, key);
       }
       case 'nip44.decrypt': {
         const { peer, ciphertext } = params;
-        const key = getSharedSecret(sk, peer);
+        const key = getSharedSecret(sk, activePubKey, peer);
         return nip44.v2.decrypt(ciphertext as string, key);
       }
       default: {
-        return { error: { message: `Uunknown type "${type}"` } };
+        return { error: { message: `Unknown type "${type}"` } };
       }
     }
   } catch (error) {
@@ -315,7 +371,7 @@ async function handleContentScriptMessage({
 }
 
 async function handlePromptMessage(
-  { id, condition, host, level, durationSeconds }: PromptResponse,
+  { id, condition, durationSeconds }: PromptResponse,
   sender
 ): Promise<void> {
   const openPrompt = openPromptMap[id];
@@ -326,24 +382,50 @@ async function handlePromptMessage(
     return;
   }
 
+  if (sender) {
+    if (!fromOwnPage(sender)) {
+      console.warn('Rejected prompt message from non-extension page');
+      return;
+    }
+    const senderWindowOrTabId = browser.windows ? sender.tab?.windowId : sender.tab?.id;
+    if (
+      openPrompt.windowId !== undefined &&
+      senderWindowOrTabId !== undefined &&
+      senderWindowOrTabId !== openPrompt.windowId
+    ) {
+      console.warn('Rejected prompt message from mismatched window/tab');
+      return;
+    }
+  }
+
+  // Always use the authoritative host and permission level bound when the prompt was opened
+  const targetHost = openPrompt.host;
+  const targetLevel = openPrompt.level;
+
   try {
     switch (condition) {
       case AuthorizationCondition.FOREVER:
       case AuthorizationCondition.EXPIRABLE_5M:
       case AuthorizationCondition.EXPIRABLE_1H:
       case AuthorizationCondition.EXPIRABLE_8H:
-        if (level) {
+        if (targetHost && targetLevel) {
+          await Storage.addActivePermission(targetHost, condition, targetLevel);
           openPrompt.resolve?.(true);
-          Storage.addActivePermission(host ?? '', condition, level);
         } else {
-          console.warn('No authorization level provided');
+          console.warn('No authorization host or level bound to prompt');
+          openPrompt.resolve?.(false);
         }
         break;
       case AuthorizationCondition.EXPIRABLE_CUSTOM: {
         const normalizedSeconds = normalizeCustomAuthorizationDurationSeconds(durationSeconds);
-        if (level && normalizedSeconds != null) {
+        if (targetHost && targetLevel && normalizedSeconds != null) {
+          await Storage.addActivePermission(
+            targetHost,
+            condition,
+            targetLevel,
+            normalizedSeconds
+          );
           openPrompt.resolve?.(true);
-          Storage.addActivePermission(host ?? '', condition, level, normalizedSeconds);
         } else {
           console.warn('Invalid custom authorization duration or missing level');
           openPrompt.resolve?.(false);
@@ -384,7 +466,7 @@ async function handlePromptMessage(
 }
 
 function promptPermission(host: string, level: number, params: PromptParams): Promise<boolean> {
-  let id = Math.random().toString().slice(4);
+  let id = crypto.randomUUID();
 
   return new Promise((resolve, reject) => {
     const promptPageURL = `${browser.runtime.getURL('prompt.html')}`;
@@ -401,9 +483,9 @@ function promptPermission(host: string, level: number, params: PromptParams): Pr
           const getPopup = browser.windows
             ? browser.windows.get(openPrompt.windowId as number)
             : browser.tabs.get(openPrompt.windowId as number);
-          getPopup.then(win => resolve(win));
+          getPopup.then(win => resolve(win)).catch(reject);
         } else {
-          reject();
+          reject(new Error('No open prompt window found'));
         }
       });
     } else {
@@ -426,12 +508,14 @@ function promptPermission(host: string, level: number, params: PromptParams): Pr
     }
 
     // when the prompt is opened (or found open), add it to the queue
-    openPromptPromise.then(win => {
-      // add the prompt to the local map
-      openPromptMap[id] = { id, windowId: win.id, resolve, reject };
-      // add to the storage
-      PromptManager.add({ id, windowId: win.id, host, level, params });
-    });
+    openPromptPromise
+      .then(win => {
+        // add the prompt to the local map with authoritative host & level
+        openPromptMap[id] = { id, windowId: win.id, host, level, resolve, reject };
+        // add to the storage
+        PromptManager.add({ id, windowId: win.id, host, level, params });
+      })
+      .catch(reject);
   });
 }
 
@@ -491,7 +575,7 @@ async function getDecryptedPrivateKey(): Promise<string | null> {
  * @returns The entered PIN, or null if cancelled/error
  */
 function promptPin(mode: 'setup' | 'unlock' | 'disable'): Promise<string | null> {
-  let id = Math.random().toString().slice(4);
+  let id = crypto.randomUUID();
 
   return new Promise((resolve, reject) => {
     let openPinPromise: Promise<browser.Windows.Window | browser.Tabs.Tab>;
@@ -505,9 +589,9 @@ function promptPin(mode: 'setup' | 'unlock' | 'disable'): Promise<string | null>
           const getPopup = browser.windows
             ? browser.windows.get(existingPinPrompt.windowId as number)
             : browser.tabs.get(existingPinPrompt.windowId as number);
-          getPopup.then(win => resolve(win));
+          getPopup.then(win => resolve(win)).catch(reject);
         } else {
-          reject();
+          reject(new Error('No open PIN prompt window found'));
         }
       });
     } else {
@@ -526,6 +610,22 @@ function promptPin(mode: 'setup' | 'unlock' | 'disable'): Promise<string | null>
   });
 }
 
+function recordFailedPinAttempt(): void {
+  failedPinAttempts += 1;
+  if (failedPinAttempts >= MAX_FREE_PIN_ATTEMPTS) {
+    const backoffMs = Math.min(
+      MAX_PIN_LOCKOUT_MS,
+      1000 * Math.pow(2, failedPinAttempts - MAX_FREE_PIN_ATTEMPTS + 1)
+    );
+    pinLockoutUntil = Date.now() + backoffMs;
+  }
+}
+
+function resetFailedPinAttempts(): void {
+  failedPinAttempts = 0;
+  pinLockoutUntil = 0;
+}
+
 /**
  * Handles PIN-related messages from the PIN prompt UI
  */
@@ -533,11 +633,35 @@ async function handlePinMessage(
   message: PinMessage,
   sender: browser.Runtime.MessageSender
 ): Promise<PinMessageResponse> {
+  if (!fromOwnPage(sender)) {
+    return { success: false, error: 'Unauthorized sender' };
+  }
+
   const { type, pin, encryptedKey, id } = message;
-  const pinPrompt = id ? pinPromptMap[id] : pinPromptMap[Object.keys(pinPromptMap)[0]];
+  const pinPrompt = id ? pinPromptMap[id] : undefined;
 
   if (!pinPrompt) {
     return { success: false, error: 'PIN prompt not found' };
+  }
+
+  const senderWindowOrTabId = browser.windows ? sender.tab?.windowId : sender.tab?.id;
+  if (
+    pinPrompt.windowId !== undefined &&
+    senderWindowOrTabId !== undefined &&
+    senderWindowOrTabId !== pinPrompt.windowId
+  ) {
+    return { success: false, error: 'PIN prompt window mismatch' };
+  }
+
+  if (type === 'verifyPin' || type === 'disablePin') {
+    const now = Date.now();
+    if (now < pinLockoutUntil) {
+      const waitSec = Math.ceil((pinLockoutUntil - now) / 1000);
+      return {
+        success: false,
+        error: `Too many failed PIN attempts. Try again in ${waitSec}s.`
+      };
+    }
   }
 
   // Extract PIN to local variable for clearing after use
@@ -556,7 +680,8 @@ async function handlePinMessage(
         // Encrypt all profile keys and store active public key
         await Storage.enablePinProtectionWithEncryptedKey(localPin, encryptedKey);
 
-        // Cache PIN
+        // Cache PIN and reset failed attempt counter
+        resetFailedPinAttempts();
         await setCachedPin(localPin);
 
         // Resolve PIN prompt
@@ -590,7 +715,8 @@ async function handlePinMessage(
 
         try {
           await decryptPrivateKey(localPin, encryptedKey);
-          // PIN is correct, cache it
+          // PIN is correct, reset failed counter and cache it
+          resetFailedPinAttempts();
           await setCachedPin(localPin);
 
           // Resolve PIN prompt
@@ -610,6 +736,7 @@ async function handlePinMessage(
 
           return { success: true };
         } catch (error) {
+          recordFailedPinAttempt();
           return { success: false, error: 'Incorrect PIN' };
         }
       }
@@ -620,7 +747,14 @@ async function handlePinMessage(
         }
 
         // Verify PIN and disable protection
-        await Storage.disablePinProtection(localPin);
+        try {
+          await Storage.disablePinProtection(localPin);
+        } catch (error) {
+          recordFailedPinAttempt();
+          return { success: false, error: 'Incorrect PIN' };
+        }
+
+        resetFailedPinAttempts();
         clearCachedPin();
 
         // Resolve PIN prompt
@@ -656,13 +790,14 @@ async function handlePinMessage(
   }
 }
 
-// prepare a cache of the last 100 shared keys used
+// prepare a cache of the last 100 shared keys used, keyed by active profile pubkey
 const secretsCache = new LRUCache<string, Uint8Array>(100);
-let previousSk: Uint8Array | null = null;
-function getSharedSecret(sk: Uint8Array, peer: string) {
-  // Detect a private key change and erase the cache if they changed their key
-  if (previousSk !== sk) {
+let previousPubKey: string | null = null;
+function getSharedSecret(sk: Uint8Array, activePubKey: string, peer: string) {
+  // Detect an active profile change and erase + zeroize cached conversation keys
+  if (previousPubKey !== activePubKey) {
     secretsCache.clear();
+    previousPubKey = activePubKey;
   }
 
   let key = secretsCache.get(peer);

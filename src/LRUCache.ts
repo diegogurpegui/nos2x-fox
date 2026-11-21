@@ -1,7 +1,7 @@
 export class LRUCache<K, V> {
   private maxSize: number;
   private map: Map<K, V>;
-  private keys: any[];
+  private keys: K[];
 
   constructor(maxSize: number) {
     this.maxSize = maxSize;
@@ -9,8 +9,18 @@ export class LRUCache<K, V> {
     this.keys = [];
   }
 
+  private zeroizeValue(val: V | undefined) {
+    if (val instanceof Uint8Array) {
+      val.fill(0);
+    }
+  }
+
   clear() {
+    for (const val of this.map.values()) {
+      this.zeroizeValue(val);
+    }
     this.map.clear();
+    this.keys = [];
   }
 
   has(k: K): boolean {
@@ -21,22 +31,36 @@ export class LRUCache<K, V> {
     const v = this.map.get(k);
 
     if (v !== undefined) {
-      this.keys.push(k);
-
-      if (this.keys.length > this.maxSize * 2) {
-        this.keys.splice(-this.maxSize);
+      const idx = this.keys.indexOf(k);
+      if (idx !== -1) {
+        this.keys.splice(idx, 1);
       }
+      this.keys.push(k);
     }
 
     return v;
   }
 
   set(k: K, v: V) {
+    if (this.map.has(k)) {
+      const existing = this.map.get(k);
+      if (existing !== v) {
+        this.zeroizeValue(existing);
+      }
+      const idx = this.keys.indexOf(k);
+      if (idx !== -1) {
+        this.keys.splice(idx, 1);
+      }
+    }
+
     this.map.set(k, v);
     this.keys.push(k);
 
-    if (this.map.size > this.maxSize) {
-      this.map.delete(this.keys.shift());
+    while (this.map.size > this.maxSize && this.keys.length > 0) {
+      const oldest = this.keys.shift() as K;
+      const evicted = this.map.get(oldest);
+      this.zeroizeValue(evicted);
+      this.map.delete(oldest);
     }
   }
 }
