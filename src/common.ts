@@ -237,7 +237,7 @@ export function isValidRelayURL(url: string): boolean {
 
 /**
  * Validates a nostr link handler URL template. Empty is valid (feature disabled).
- * Non-empty templates must contain a %s placeholder and form a parseable URL.
+ * Non-empty templates must contain a %s placeholder and form a parseable http(s) URL.
  */
 export function isValidNostrLinkHandlerTemplate(template: string): boolean {
   const trimmed = template.trim();
@@ -245,8 +245,8 @@ export function isValidNostrLinkHandlerTemplate(template: string): boolean {
   if (!trimmed.includes('%s')) return false;
 
   try {
-    new URL(trimmed.replace('%s', 'npub1test'));
-    return true;
+    const parsed = new URL(trimmed.replace('%s', 'npub1test'));
+    return parsed.protocol === 'https:' || parsed.protocol === 'http:';
   } catch {
     return false;
   }
@@ -254,13 +254,26 @@ export function isValidNostrLinkHandlerTemplate(template: string): boolean {
 
 /** Builds the destination URL from a template and a nostr: href. */
 export function buildNostrLinkUrl(template: string, nostrHref: string): string | null {
+  if (!isValidNostrLinkHandlerTemplate(template) || !template.trim()) {
+    return null;
+  }
+
   const colonIndex = nostrHref.indexOf(':');
   if (colonIndex === -1) return null;
 
   const payload = nostrHref.slice(colonIndex + 1);
   if (!payload) return null;
 
-  return template.replace('%s', encodeURIComponent(payload));
+  const candidate = template.trim().replace('%s', encodeURIComponent(payload));
+  try {
+    const parsed = new URL(candidate);
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+      return null;
+    }
+    return parsed.toString();
+  } catch {
+    return null;
+  }
 }
 
 export function isHexadecimal(value: string) {
