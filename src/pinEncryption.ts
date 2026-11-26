@@ -5,20 +5,29 @@
 
 import { clearUint8Array } from './memoryUtils';
 
-const PBKDF2_ITERATIONS = 100000;
+const PBKDF2_ITERATIONS = 600000;
+const LEGACY_PBKDF2_ITERATIONS = 100000;
+const MIN_PBKDF2_ITERATIONS = 100000;
+const MAX_PBKDF2_ITERATIONS = 2000000;
 const SALT_LENGTH = 16; // bytes
 const IV_LENGTH = 12; // bytes (for AES-GCM)
+const MIN_CIPHERTEXT_LENGTH = 17; // 16-byte GCM auth tag + at least 1 byte payload
 
 export interface EncryptedData {
   salt: string; // base64
   iv: string; // base64
   ciphertext: string; // base64
+  iterations?: number;
 }
 
 /**
  * Derives an encryption key from a PIN using PBKDF2
  */
-async function deriveKeyFromPin(pin: string, salt: Uint8Array): Promise<CryptoKey> {
+async function deriveKeyFromPin(
+  pin: string,
+  salt: Uint8Array,
+  iterations: number = PBKDF2_ITERATIONS
+): Promise<CryptoKey> {
   const encoder = new TextEncoder();
   const pinData = encoder.encode(pin);
 
@@ -32,7 +41,7 @@ async function deriveKeyFromPin(pin: string, salt: Uint8Array): Promise<CryptoKe
       {
         name: 'PBKDF2',
         salt: salt as BufferSource,
-        iterations: PBKDF2_ITERATIONS,
+        iterations,
         hash: 'SHA-256'
       },
       baseKey,
@@ -56,7 +65,7 @@ async function deriveKeyFromPin(pin: string, salt: Uint8Array): Promise<CryptoKe
  * Encrypts a private key using a PIN
  * @param pin - The PIN to use for encryption
  * @param privateKey - The private key to encrypt (hex string)
- * @returns JSON string containing encrypted data (salt, iv, ciphertext)
+ * @returns JSON string containing encrypted data (salt, iv, ciphertext, iterations)
  */
 export async function encryptPrivateKey(pin: string, privateKey: string): Promise<string> {
   // Generate random salt and IV
@@ -64,7 +73,7 @@ export async function encryptPrivateKey(pin: string, privateKey: string): Promis
   const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
 
   // Derive encryption key from PIN
-  const key = await deriveKeyFromPin(pin, salt);
+  const key = await deriveKeyFromPin(pin, salt, PBKDF2_ITERATIONS);
 
   // Convert private key to bytes
   const encoder = new TextEncoder();
@@ -85,7 +94,8 @@ export async function encryptPrivateKey(pin: string, privateKey: string): Promis
     const encryptedData: EncryptedData = {
       salt: arrayBufferToBase64(salt),
       iv: arrayBufferToBase64(iv),
-      ciphertext: arrayBufferToBase64(ciphertext)
+      ciphertext: arrayBufferToBase64(ciphertext),
+      iterations: PBKDF2_ITERATIONS
     };
 
     return JSON.stringify(encryptedData);
@@ -110,13 +120,45 @@ export async function decryptPrivateKey(pin: string, encryptedKey: string): Prom
     throw new Error('Invalid encrypted key format');
   }
 
+  if (
+    !encryptedData ||
+    typeof encryptedData.salt !== 'string' ||
+    typeof encryptedData.iv !== 'string' ||
+    typeof encryptedData.ciphertext !== 'string'
+  ) {
+    throw new Error('Invalid encrypted key structure');
+  }
+
+  const iterations =
+    encryptedData.iterations !== undefined
+      ? encryptedData.iterations
+      : LEGACY_PBKDF2_ITERATIONS;
+
+  if (
+    typeof iterations !== 'number' ||
+    !Number.isInteger(iterations) ||
+    iterations < MIN_PBKDF2_ITERATIONS ||
+    iterations > MAX_PBKDF2_ITERATIONS
+  ) {
+    throw new Error('Invalid PBKDF2 iteration count');
+  }
+
   // Convert from base64
   const salt = base64ToUint8Array(encryptedData.salt);
   const iv = base64ToUint8Array(encryptedData.iv);
   const ciphertext = base64ToUint8Array(encryptedData.ciphertext);
 
+  if (
+    salt.length !== SALT_LENGTH ||
+    iv.length !== IV_LENGTH ||
+    ciphertext.length < MIN_CIPHERTEXT_LENGTH
+  ) {
+    clearUint8Array(ciphertext);
+    throw new Error('Invalid encrypted key parameters');
+  }
+
   // Derive encryption key from PIN
-  const key = await deriveKeyFromPin(pin, salt);
+  const key = await deriveKeyFromPin(pin, salt, iterations);
 
   // Decrypt
   let decryptedBytes: ArrayBuffer;

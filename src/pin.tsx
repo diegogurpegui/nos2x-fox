@@ -35,25 +35,28 @@ function PinPrompt() {
     };
   }, []);
 
+  const MIN_PIN_LENGTH = 4;
+  const MAX_PIN_LENGTH = 64;
+
   function handlePinChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const value = e.target.value.replace(/\D/g, ''); // Only allow digits
-    if (value.length <= 6) {
+    const value = e.target.value;
+    if (value.length <= MAX_PIN_LENGTH) {
       setPin(value);
       setError(''); // Clear error on input
     }
   }
 
   function handleConfirmPinChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const value = e.target.value.replace(/\D/g, ''); // Only allow digits
-    if (value.length <= 6) {
+    const value = e.target.value;
+    if (value.length <= MAX_PIN_LENGTH) {
       setConfirmPin(value);
       setError(''); // Clear error on input
     }
   }
 
   function validatePin(pinValue: string): boolean {
-    if (pinValue.length < 4 || pinValue.length > 6) {
-      setError('PIN must be between 4 and 6 digits');
+    if (pinValue.length < MIN_PIN_LENGTH || pinValue.length > MAX_PIN_LENGTH) {
+      setError(`PIN or passphrase must be between ${MIN_PIN_LENGTH} and ${MAX_PIN_LENGTH} characters`);
       return false;
     }
     return true;
@@ -213,12 +216,12 @@ function PinPrompt() {
         )}
 
         <div className="form-field">
-          <label htmlFor="pin-input">PIN (4-6 digits):</label>
+          <label htmlFor="pin-input">PIN or passphrase (4-64 characters):</label>
           <input
             id="pin-input"
             type="password"
             value={pin}
-            maxLength={6}
+            maxLength={MAX_PIN_LENGTH}
             onChange={handlePinChange}
             onKeyPress={handleKeyPress}
             disabled={isProcessing}
@@ -228,12 +231,12 @@ function PinPrompt() {
 
         {mode === 'setup' && (
           <div className="form-field">
-            <label htmlFor="confirm-pin-input">Confirm PIN:</label>
+            <label htmlFor="confirm-pin-input">Confirm PIN or passphrase:</label>
             <input
               id="confirm-pin-input"
               type="password"
               value={confirmPin}
-              maxLength={6}
+              maxLength={MAX_PIN_LENGTH}
               onChange={handleConfirmPinChange}
               onKeyPress={handleKeyPress}
               disabled={isProcessing}

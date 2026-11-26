@@ -42,11 +42,24 @@ function Prompt() {
   const [showCustomDurationSection, setShowCustomDurationSection] = useState(false);
 
   useEffect(() => {
-    Storage.getActiveProfile().then(profile => {
-      setActiveProfile(profile);
-      const pubKey = derivePublicKeyFromPrivateKey(profile.privateKey);
-      setActivePubKeyNIP19(nip19.npubEncode(pubKey));
-    });
+    async function loadActiveProfile() {
+      try {
+        const [profile, storedPubKey] = await Promise.all([
+          Storage.getActiveProfile(),
+          Storage.getActivePublicKey()
+        ]);
+        setActiveProfile(profile);
+        const pubKey =
+          storedPubKey ||
+          (profile?.privateKey ? derivePublicKeyFromPrivateKey(profile.privateKey) : '');
+        if (pubKey) {
+          setActivePubKeyNIP19(nip19.npubEncode(pubKey));
+        }
+      } catch (err) {
+        console.error('Error loading active profile for prompt.', err);
+      }
+    }
+    loadActiveProfile();
   }, []);
 
   /** Pepare params of event */

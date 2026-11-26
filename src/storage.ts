@@ -566,13 +566,15 @@ export async function addProfile(
     [ConfigurationKeys.PROFILES]: profiles
   });
 
-  // if it's the first profile to be added, then set it as the active one
+  // if it's the first profile to be added, or if it updates the currently active profile, sync active keys
+  const activePublicKey = await getActivePublicKey();
   const activePrivateKey = await readActivePrivateKey();
-  if (!activePrivateKey && Object.keys(profiles).length == 1) {
-    const profilePubKey = Object.keys(profiles)[0];
-
+  if (
+    (!activePrivateKey && Object.keys(profiles).length == 1) ||
+    activePublicKey === profilePublicKey
+  ) {
     // Always store active public key first
-    await setActivePublicKey(profilePubKey);
+    await setActivePublicKey(profilePublicKey);
 
     // Then update private key based on PIN status
     if (pinEnabled) {
@@ -661,6 +663,18 @@ export async function updateProfile(
   await browser.storage.local.set({
     [ConfigurationKeys.PROFILES]: profiles
   });
+
+  // Keep top-level active key in sync when updating the currently active profile
+  const activePublicKey = await getActivePublicKey();
+  if (activePublicKey === profilePublicKey && profile.privateKey) {
+    if (pinEnabled) {
+      if (isPrivateKeyEncrypted(profile.privateKey)) {
+        await setEncryptedPrivateKey(profile.privateKey);
+      }
+    } else {
+      await updateActivePrivateKey(profile.privateKey);
+    }
+  }
 
   return profiles;
 }
@@ -815,12 +829,13 @@ export async function empty(): Promise<void> {
   return await browser.storage.local.clear();
 }
 
-/** Removes legacy storage keys that are no longer used. */
+/** Removes legacy storage keys that are no longer used, only if present. */
 async function clearUnused(): Promise<void> {
-  return await browser.storage.local.remove([
-    'relays', // no longer used
-    'permissions' // no longer used
-  ]);
+  const existing = await browser.storage.local.get(['relays', 'permissions']);
+  const keysToRemove = ['relays', 'permissions'].filter(k => k in existing);
+  if (keysToRemove.length > 0) {
+    await browser.storage.local.remove(keysToRemove);
+  }
 }
 
 // clear unused
