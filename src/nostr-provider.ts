@@ -60,22 +60,16 @@ window.nostr = {
   },
 
   _call(type: string, params: PromptParams) {
-    const id = Math.random().toString().slice(-4);
-    console.log(
-      '%c[nos2x-fox:%c' +
-        id +
-        '%c]%c calling %c' +
-        type +
-        '%c with %c' +
-        JSON.stringify(params || {}),
-      'background-color:#f1b912;font-weight:bold;color:white',
-      'background-color:#f1b912;font-weight:bold;color:#a92727',
-      'background-color:#f1b912;color:white;font-weight:bold',
-      'color:auto',
-      'font-weight:bold;color:#08589d;font-family:monospace',
-      'color:auto',
-      'font-weight:bold;color:#90b12d;font-family:monospace'
-    );
+    const id =
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : Array.from(crypto.getRandomValues(new Uint8Array(16)), b =>
+            b.toString(16).padStart(2, '0')
+          ).join('');
+    const targetOrigin =
+      typeof window.location?.origin === 'string' && window.location.origin !== 'null'
+        ? window.location.origin
+        : '*';
 
     return new Promise((resolve, reject) => {
       this._requests[id] = { resolve, reject };
@@ -86,7 +80,7 @@ window.nostr = {
           type,
           params
         },
-        '*'
+        targetOrigin
       );
     });
   }
@@ -94,11 +88,12 @@ window.nostr = {
 
 window.addEventListener('message', message => {
   if (
+    message.source !== window ||
     !message.data ||
     message.data.response === null ||
     message.data.response === undefined ||
     message.data.ext !== EXTENSION_CODE ||
-    !window.nostr._requests[message.data.id]
+    !Object.prototype.hasOwnProperty.call(window.nostr._requests, message.data.id)
   )
     return;
 
@@ -111,20 +106,6 @@ window.addEventListener('message', message => {
   } else {
     window.nostr._requests[message.data.id].resolve(message.data.response);
   }
-
-  console.log(
-    '%c[nos2x-fox:%c' +
-      message.data.id +
-      '%c]%c result: %c' +
-      JSON.stringify(
-        message?.data?.response || message?.data?.response?.error?.message || {}
-      ),
-    'background-color:#f1b912;font-weight:bold;color:white',
-    'background-color:#f1b912;font-weight:bold;color:#a92727',
-    'background-color:#f1b912;color:white;font-weight:bold',
-    'color:auto',
-    'font-weight:bold;color:#08589d'
-  );
 
   delete window.nostr._requests[message.data.id];
 });

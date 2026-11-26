@@ -1,7 +1,6 @@
 import browser from 'webextension-polyfill';
 
 import { buildNostrLinkUrl, isCallableFromPage } from './common';
-import * as Storage from './storage';
 import { ConfigurationKeys } from './types';
 
 const EXTENSION_CODE = 'nos2x-fox';
@@ -60,7 +59,8 @@ function syncLinkHandlers() {
 }
 
 async function loadLinkHandlerTemplate() {
-  linkHandlerTemplate = await Storage.getNostrLinkHandlerUrlTemplate();
+  const data = await browser.storage.local.get(ConfigurationKeys.NOSTR_LINK_HANDLER_URL);
+  linkHandlerTemplate = (data[ConfigurationKeys.NOSTR_LINK_HANDLER_URL] as string) ?? '';
   syncLinkHandlers();
 }
 
