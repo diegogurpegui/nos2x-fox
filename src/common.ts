@@ -270,7 +270,7 @@ export function buildNostrLinkUrl(template: string, nostrHref: string): string |
     if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
       return null;
     }
-    return parsed.toString();
+    return candidate;
   } catch {
     return null;
   }

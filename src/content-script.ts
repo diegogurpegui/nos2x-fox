@@ -97,6 +97,12 @@ window.addEventListener('message', async message => {
     return;
   }
 
+  // Content-script console only. DevTools shows these when the level is Debug.
+  console.debug(
+    `[nos2x-fox:${message.data.id}] calling ${message.data.type}`,
+    message.data.params
+  );
+
   // pass on to background
   let response;
   try {
@@ -109,6 +115,8 @@ window.addEventListener('message', async message => {
     console.error('Error from calling extension.', error);
     response = { error };
   }
+
+  console.debug(`[nos2x-fox:${message.data.id}] result`, response);
 
   // return response
   window.postMessage(
